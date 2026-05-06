@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PseudoKiai: The Journey of KH. Khalil Bangkalan</title>
+  <link rel="stylesheet" href="Web Styling.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- Decorative background elements -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <div class="wrapper">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="header-ornament">
+        <span class="ornament-line"></span>
+        <span class="ornament-diamond">◆</span>
+        <span class="ornament-line"></span>
+      </div>
+      <h1 class="title">PseudoKiai</h1>
+      <p class="title-sub">The Journey of <em>KH. Khalil Bangkalan</em></p>
+      <p class="subtitle">Latih logika dan ketelitianmu dalam permainan Sudoku yang terinspirasi dari nilai kesabaran dan ketekunan.</p>
+      <div class="header-ornament">
+        <span class="ornament-line"></span>
+        <span class="ornament-diamond">◆</span>
+        <span class="ornament-line"></span>
+      </div>
+    </header>
+
+    <!-- MAIN GAME AREA -->
+    <main class="game-area">
+
+      <!-- LEFT PANEL: Info + Controls -->
+      <aside class="left-panel">
+        <div class="stat-card">
+          <div class="stat-label">Kesalahan</div>
+          <div class="stat-value" id="mistakes-display">0 / 3</div>
+          <div class="mistake-dots" id="mistake-dots">
+            <span class="dot" id="dot-1"></span>
+            <span class="dot" id="dot-2"></span>
+            <span class="dot" id="dot-3"></span>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Waktu</div>
+          <div class="stat-value" id="timer-display">00:00</div>
+        </div>
+
+        <button class="btn-new-game" id="new-game-btn">
+          <span class="btn-icon">✦</span>
+          Permainan Baru
+        </button>
+
+        <div class="values-card">
+          <div class="values-title">Nilai Utama</div>
+          <ul class="values-list">
+            <li><span class="value-icon">☽</span> Kesabaran</li>
+            <li><span class="value-icon">◈</span> Ketelitian</li>
+            <li><span class="value-icon">∞</span> Ketekunan</li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- CENTER: Sudoku Board -->
+      <section class="board-section">
+        <div class="board-wrapper">
+          <div class="sudoku-board" id="sudoku-board"></div>
+        </div>
+      </section>
+
+      <!-- RIGHT PANEL: Number Input -->
+      <aside class="right-panel">
+        <div class="numpad-label">Pilih Angka</div>
+        <div class="numpad" id="numpad">
+          <button class="num-btn" data-num="1">1</button>
+          <button class="num-btn" data-num="2">2</button>
+          <button class="num-btn" data-num="3">3</button>
+          <button class="num-btn" data-num="4">4</button>
+          <button class="num-btn" data-num="5">5</button>
+          <button class="num-btn" data-num="6">6</button>
+          <button class="num-btn" data-num="7">7</button>
+          <button class="num-btn" data-num="8">8</button>
+          <button class="num-btn" data-num="9">9</button>
+        </div>
+
+        <button class="btn-erase" id="erase-btn">
+          <span>⌫</span> Hapus
+        </button>
+
+        <div class="hint-card">
+          <div class="hint-icon">🕌</div>
+          <p class="hint-text">"Nilai ungkapan seseorang bukan terletak hanya sebatas pada kefasihan kata-kata, 
+            melainkan sejauh mana penghayatan atas maknanya"</p>
+          <p class="hint-attr">— KH. Khalil Bangkalan</p>
+        </div>
+      </aside>
+
+    </main>
+
+  </div>
+
+  <!-- POPUP OVERLAY -->
+  <div class="popup-overlay" id="popup-overlay">
+    <div class="popup-card" id="popup-card">
+      <div class="popup-icon" id="popup-icon">✓</div>
+      <div class="popup-title" id="popup-title">Tepat!</div>
+      <div class="popup-message" id="popup-message">Silakan ambil kertas dan cocokkan dengan angka yang kamu pilih</div>
+      <button class="popup-close" id="popup-close">Lanjutkan</button>
+    </div>
+  </div>
+
+  <!-- GAME OVER OVERLAY -->
+  <div class="popup-overlay" id="gameover-overlay">
+    <div class="popup-card gameover-card">
+      <div class="popup-icon gameover-icon">✗</div>
+      <div class="popup-title">Permainan Selesai</div>
+      <div class="popup-message">Jangan menyerah! Kesabaran adalah kunci keberhasilan.<br><br><em>— KH. Khalil Bangkalan</em></div>
+      <button class="popup-close" id="gameover-restart">Coba Lagi</button>
+    </div>
+  </div>
+
+  <!-- WIN OVERLAY -->
+  <div class="popup-overlay" id="win-overlay">
+    <div class="popup-card win-card">
+      <div class="popup-icon win-icon">★</div>
+      <div class="popup-title">Selamat!</div>
+      <div class="popup-message">Kamu telah menyelesaikan perjalanan ini dengan penuh ketekunan dan ketelitian.</div>
+      <button class="popup-close" id="win-restart">Main Lagi</button>
+    </div>
+  </div>
+
+  <script src="Web Script.js"></script>
+</body>
+</html>
