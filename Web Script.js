@@ -17,13 +17,17 @@ let mistakes       = 0;
 let timerInterval  = null;
 let timerSeconds   = 0;
 let gameActive     = false;
+let istighfarCount = 0;
+let hasExtraLifeUsed = false;
 
 const MAX_MISTAKES = 3;
+const ISTIGHFAR_TARGET = 10;
 
 // ── DOM Refs ───────────────────────────────────────────────
 // (pindahkan inisialisasi DOM ke DOMContentLoaded)
 let board, mistakesDisplay, timerDisplay, newGameBtn, eraseBtn, numpad, numBtns;
-let popupOverlay, popupClose, gameoverOverlay, gameoverRestart, winOverlay, winRestart;
+let popupOverlay, popupClose, gameoverOverlay, gameoverRestart, gameoverIstighfar, winOverlay, winRestart;
+let gameoverMessage, istighfarProgress, istighfarSection;
 
 // ── Init ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -40,6 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
   popupClose       = document.getElementById('popup-close');
   gameoverOverlay  = document.getElementById('gameover-overlay');
   gameoverRestart  = document.getElementById('gameover-restart');
+  gameoverIstighfar = document.getElementById('gameover-istighfar');
+  gameoverMessage  = document.getElementById('gameover-message');
+  istighfarProgress = document.getElementById('istighfar-progress');
+  istighfarSection = document.getElementById('istighfar-section');
   winOverlay       = document.getElementById('win-overlay');
   winRestart       = document.getElementById('win-restart');
 
@@ -53,6 +61,7 @@ function bindEvents() {
   eraseBtn.addEventListener('click', eraseCell);
   popupClose.addEventListener('click', () => closeOverlay(popupOverlay));
   gameoverRestart.addEventListener('click', startNewGame);
+  gameoverIstighfar.addEventListener('click', handleIstighfarClick);
   winRestart.addEventListener('click', startNewGame);
 
   numBtns.forEach(btn => {
@@ -103,10 +112,13 @@ function startNewGame() {
   selectedNumber = null;
   timerSeconds = 0;
   gameActive = true;
+  istighfarCount = 0;
+  hasExtraLifeUsed = false;
 
   clearTimer();
   updateMistakeDisplay();
   clearNumSelection();
+  updateIstighfarDisplay();
 
   // Generate
   solution  = generateSolution();
@@ -437,7 +449,45 @@ function showCorrectPopup() {
 function gameOver() {
   gameActive = false;
   clearTimer();
-  setTimeout(() => showOverlay(gameoverOverlay), 400);
+  setTimeout(openGameOverMenu, 400);
+}
+
+function openGameOverMenu() {
+  const hasBonus = !hasExtraLifeUsed;
+  gameoverMessage.innerHTML = hasBonus
+    ? 'Kesalahanmu sudah mencapai batas. Kamu bisa mendapat satu nyawa lagi jika melakukan <strong>istighfar 10x</strong>.'
+    : 'Kesalahanmu sudah mencapai batas dan kesempatan tambahan sudah habis. Yuk coba lagi dan tetap sabar.';
+
+  istighfarSection.style.display = hasBonus ? 'block' : 'none';
+  updateIstighfarDisplay();
+  showOverlay(gameoverOverlay);
+}
+
+function handleIstighfarClick() {
+  if (hasExtraLifeUsed) return;
+
+  istighfarCount++;
+  updateIstighfarDisplay();
+
+  if (istighfarCount >= ISTIGHFAR_TARGET) {
+    grantExtraLife();
+  }
+}
+
+function updateIstighfarDisplay() {
+  if (!istighfarSection) return;
+  istighfarProgress.textContent = `Istighfar: ${istighfarCount} / ${ISTIGHFAR_TARGET}`;
+}
+
+function grantExtraLife() {
+  hasExtraLifeUsed = true;
+  mistakes = MAX_MISTAKES - 1;
+  updateMistakeDisplay();
+  gameActive = true;
+
+  gameoverMessage.innerHTML = 'Alhamdulillah! Kamu mendapat satu nyawa lagi. Yuk lanjutkan permainan dengan hati tenang.';
+  istighfarSection.style.display = 'none';
+  setTimeout(() => closeOverlay(gameoverOverlay), 800);
 }
 
 function checkWin() {

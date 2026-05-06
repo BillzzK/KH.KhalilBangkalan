@@ -552,6 +552,29 @@ body {
   box-shadow: 0 8px 24px rgba(37, 99, 168, 0.38);
 }
 
+.popup-alt {
+  background: var(--gray-100);
+  color: var(--gray-800);
+  border: 1px solid var(--gray-300);
+  margin-bottom: 14px;
+}
+
+.popup-alt:hover {
+  background: var(--gray-200);
+}
+
+.istighfar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.istighfar-progress {
+  font-weight: 700;
+  color: var(--blue-accent);
+}
+
 /* ==============================
    ANIMATIONS
    ============================== */
