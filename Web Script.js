@@ -459,6 +459,9 @@ function openGameOverMenu() {
     : 'Kesalahanmu sudah mencapai batas dan kesempatan tambahan sudah habis. Yuk coba lagi dan tetap sabar.';
 
   istighfarSection.style.display = hasBonus ? 'block' : 'none';
+  gameoverIstighfar.disabled = false;
+  gameoverIstighfar.classList.remove('disabled');
+  gameoverOverlay.querySelector('.popup-card').classList.remove('bonus-active');
   updateIstighfarDisplay();
   showOverlay(gameoverOverlay);
 }
@@ -487,6 +490,10 @@ function grantExtraLife() {
 
   gameoverMessage.innerHTML = 'Alhamdulillah! Kamu mendapat satu nyawa lagi. Yuk lanjutkan permainan dengan hati tenang.';
   istighfarSection.style.display = 'none';
+  gameoverIstighfar.disabled = true;
+  gameoverIstighfar.classList.add('disabled');
+  const card = gameoverOverlay.querySelector('.popup-card');
+  card.classList.add('bonus-active');
   setTimeout(() => closeOverlay(gameoverOverlay), 800);
 }
 

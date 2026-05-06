@@ -563,6 +563,13 @@ body {
   background: var(--gray-200);
 }
 
+.popup-close.disabled {
+  opacity: 0.55;
+  cursor: default;
+  box-shadow: none;
+  pointer-events: none;
+}
+
 .istighfar-section {
   display: flex;
   flex-direction: column;
@@ -573,6 +580,21 @@ body {
 .istighfar-progress {
   font-weight: 700;
   color: var(--blue-accent);
+}
+
+.popup-card.gameover-card.bonus-active {
+  border-color: var(--success);
+  box-shadow: 0 24px 64px rgba(58, 158, 106, 0.24);
+  background: linear-gradient(180deg, #ffffff 0%, #effaf2 100%);
+}
+
+.popup-card.gameover-card.bonus-active .popup-icon {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+.popup-card.gameover-card.bonus-active .popup-title {
+  color: var(--success);
 }
 
 /* ==============================
