@@ -247,6 +247,15 @@ html, body {
 .panel-right  { width: 220px; min-width: 200px; display: flex; flex-direction: column; gap: 12px; }
 
 /* Cards */
+.card,
+.stat-card,
+.values-card,
+.player-card,
+.btn-new-game,
+.btn-dice,
+.popup-card {
+  border: 1.5px solid rgba(37,122,181,0.14);
+}
 .card {
   background: rgba(255,255,255,0.85);
   border-radius: var(--radius);
@@ -320,6 +329,11 @@ html, body {
 .board-wrapper {
   width: min(504px, 100vw - 80px);
   aspect-ratio: 1;
+  padding: 14px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(37, 122, 181, 0.16);
+  box-shadow: var(--shadow-soft);
 }
 .sudoku-board {
   display: grid;
@@ -327,7 +341,7 @@ html, body {
   grid-template-rows: repeat(9, 1fr);
   width: 100%; height: 100%;
   border: 3px solid var(--blue-accent);
-  border-radius: 6px;
+  border-radius: 18px;
   box-shadow: var(--shadow-deep);
   overflow: hidden;
   background: var(--white);
@@ -338,8 +352,14 @@ html, body {
   font-family: var(--font-display); font-size: clamp(14px, 2.5vw, 22px);
   cursor: pointer; user-select: none; position: relative;
   transition: background 0.12s ease;
-  border: 1px solid #d0dce8;
+  border-right: 1px solid rgba(208, 220, 232, 0.85);
+  border-bottom: 1px solid rgba(208, 220, 232, 0.85);
 }
+
+/* Remove redundant outer edges inside the board border */
+.sudoku-board .cell:nth-child(9n) { border-right: none; }
+.sudoku-board .cell:nth-child(-n+9) { border-top: none; }
+.sudoku-board .cell:nth-last-child(-n+9) { border-bottom: none; }
 
 /* Box borders 3x3 */
 .cell[data-col="2"], .cell[data-col="5"] { border-right: 2.5px solid var(--blue-accent); }
