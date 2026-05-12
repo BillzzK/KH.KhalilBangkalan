@@ -3,155 +3,228 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PseudoKiai: The Journey of KH. Khalil Bangkalan</title>
-  <link rel="icon" type="image/jpeg" href="/Photo.jpeg">
+  <title>PseudoKiai — The Journey of KH. Khalil Bangkalan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="Web Styling.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
 
-  <!-- Decorative background elements -->
-  <div class="bg-orb orb-1"></div>
-  <div class="bg-orb orb-2"></div>
-  <div class="bg-orb orb-3"></div>
+  <!-- Dekoratif Orbs -->
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
 
-  <div class="wrapper">
+  <!-- ======================== SCREEN 1: LOBBY ======================== -->
+  <div id="screen-lobby" class="screen active">
+    <div class="lobby-container">
+      <header class="lobby-header fade-down">
+        <div class="ornament-line">
+          <span class="ornament-diamond">◆</span>
+          <span class="ornament-bar"></span>
+          <span class="ornament-diamond">◆</span>
+        </div>
+        <h1 class="title-main">PseudoKiai</h1>
+        <p class="title-sub">The Journey of KH. Khalil Bangkalan</p>
+        <p class="title-desc">Latih logika dan ketelitianmu dalam permainan Sudoku yang terinspirasi dari nilai kesabaran dan ketekunan.</p>
+        <div class="ornament-line">
+          <span class="ornament-diamond">◆</span>
+          <span class="ornament-bar"></span>
+          <span class="ornament-diamond">◆</span>
+        </div>
+      </header>
 
-    <!-- HEADER -->
-    <header class="header">
-      <div class="header-ornament">
-        <span class="ornament-line"></span>
-        <span class="ornament-diamond">◆</span>
-        <span class="ornament-line"></span>
+      <div class="lobby-setup fade-up">
+        <div class="setup-card">
+          <label class="setup-label">Berapa pemain?</label>
+          <div class="player-count-btns" id="player-count-btns">
+            <button class="count-btn active" data-count="2">2</button>
+            <button class="count-btn" data-count="3">3</button>
+            <button class="count-btn" data-count="4">4</button>
+            <button class="count-btn" data-count="5">5</button>
+            <button class="count-btn" data-count="6">6</button>
+          </div>
+
+          <div class="player-names-container" id="player-names-container">
+            <!-- Dynamic inputs -->
+          </div>
+
+          <button class="btn-start" id="btn-start">Mulai Permainan →</button>
+        </div>
       </div>
-      <h1 class="title">PseudoKiai</h1>
-      <p class="title-sub">The Journey of <em>KH. Khalil Bangkalan</em></p>
-      <p class="subtitle">Latih logika dan ketelitianmu dalam permainan Sudoku yang terinspirasi dari nilai kesabaran dan ketekunan.</p>
-      <div class="header-ornament">
-        <span class="ornament-line"></span>
-        <span class="ornament-diamond">◆</span>
-        <span class="ornament-line"></span>
+    </div>
+  </div>
+
+  <!-- ======================== SCREEN 2: DICE ROLL ======================== -->
+  <div id="screen-dice" class="screen">
+    <div class="dice-container fade-down">
+      <div class="dice-header">
+        <div class="ornament-line">
+          <span class="ornament-diamond">◆</span>
+          <span class="ornament-bar"></span>
+          <span class="ornament-diamond">◆</span>
+        </div>
+        <h2 class="dice-title">Tentukan Urutan Bermain</h2>
+        <p class="dice-subtitle">Setiap pemain lempar dadu untuk menentukan siapa yang main pertama</p>
       </div>
-    </header>
 
-    <!-- MAIN GAME AREA -->
-    <main class="game-area">
+      <div class="dice-content">
+        <div class="dice-turn-info" id="dice-turn-info">Giliran <strong id="dice-current-name"></strong> melempar dadu</div>
 
-      <!-- LEFT PANEL: Info + Controls -->
-      <aside class="left-panel">
-        <div class="stat-card">
-          <div class="stat-label">Kesalahan</div>
-          <div class="stat-value" id="mistakes-display">0 / 3</div>
-          <div class="mistake-dots" id="mistake-dots">
-            <span class="dot" id="dot-1"></span>
-            <span class="dot" id="dot-2"></span>
-            <span class="dot" id="dot-3"></span>
+        <div class="dice-visual" id="dice-visual">
+          <svg id="dice-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="5" width="90" height="90" rx="18" fill="#3a7ab5" />
+            <g id="dice-dots" fill="#ffffff"></g>
+          </svg>
+        </div>
+
+        <button class="btn-roll" id="btn-roll">🎲 Lempar Dadu</button>
+
+        <div class="dice-results" id="dice-results"></div>
+
+        <div class="dice-order" id="dice-order" style="display:none;">
+          <h3>Urutan Bermain:</h3>
+          <ol id="order-list"></ol>
+          <button class="btn-start" id="btn-start-game">Mulai Game →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================== SCREEN 3: GAME ======================== -->
+  <div id="screen-game" class="screen">
+    <div class="game-layout">
+
+      <!-- KIRI -->
+      <aside class="panel-left">
+        <div class="card card-active-player" id="card-active-player">
+          <div class="card-label">Pemain Aktif</div>
+          <div class="active-player-name" id="active-player-name">-</div>
+          <div class="active-player-lives" id="active-player-lives"></div>
+          <div class="active-player-score"><span id="active-player-score">0</span> <span class="score-unit">poin</span></div>
+        </div>
+
+        <div class="card card-timer">
+          <div class="card-label">Waktu</div>
+          <div class="timer-display" id="timer-display">00:00</div>
+        </div>
+
+        <div class="card card-progress">
+          <div class="card-label">Papan</div>
+          <div class="progress-info" id="progress-info">0 / 0 terisi</div>
+          <div class="progress-bar-outer">
+            <div class="progress-bar-inner" id="progress-bar-inner"></div>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-label">Waktu</div>
-          <div class="stat-value" id="timer-display">00:00</div>
-        </div>
+        <button class="btn-new-game" id="btn-new-game">↩ Permainan Baru</button>
 
-        <button class="btn-new-game" id="new-game-btn">
-          <span class="btn-icon">✦</span>
-          Permainan Baru
-        </button>
-
-        <div class="player-card">
-          <div class="player-card-title">Mode Grup</div>
-          <div class="player-settings">
-            <label for="player-count">Jumlah Pemain</label>
-            <input id="player-count" type="number" min="1" max="6" value="2" />
-          </div>
-          <button class="btn-dice" id="roll-dice-btn">Kocok Dadu</button>
-          <div class="current-player-card">
-            <div class="player-current-label">Giliran</div>
-            <div class="player-current-name" id="current-player-name">Pemain 1</div>
-          </div>
-          <div class="player-list" id="player-list"></div>
-        </div>
-
-        <div class="values-card">
-          <div class="values-title">Nilai Utama</div>
-          <ul class="values-list">
-            <li><span class="value-icon">☽</span> Kesabaran</li>
-            <li><span class="value-icon">◈</span> Ketelitian</li>
-            <li><span class="value-icon">∞</span> Ketekunan</li>
-          </ul>
+        <div class="card card-quote">
+          <div class="quote-arabic">﴾ اِقْرَأْ ﴿</div>
+          <div class="quote-text">"Ilmu tanpa amal bagaikan pohon tanpa buah."</div>
+          <div class="quote-author">— KH. Khalil Bangkalan</div>
         </div>
       </aside>
 
-      <!-- CENTER: Sudoku Board -->
-      <section class="board-section">
+      <!-- TENGAH -->
+      <main class="panel-center">
+        <div class="game-header">
+          <span class="game-title-small">PseudoKiai</span>
+          <div class="turn-badge" id="turn-badge">Giliran: <span id="turn-name">-</span></div>
+        </div>
         <div class="board-wrapper">
           <div class="sudoku-board" id="sudoku-board"></div>
         </div>
-      </section>
+      </main>
 
-      <!-- RIGHT PANEL: Number Input -->
-      <aside class="right-panel">
-        <div class="numpad-label">Pilih Angka</div>
-        <div class="numpad" id="numpad">
-          <button class="num-btn" data-num="1">1</button>
-          <button class="num-btn" data-num="2">2</button>
-          <button class="num-btn" data-num="3">3</button>
-          <button class="num-btn" data-num="4">4</button>
-          <button class="num-btn" data-num="5">5</button>
-          <button class="num-btn" data-num="6">6</button>
-          <button class="num-btn" data-num="7">7</button>
-          <button class="num-btn" data-num="8">8</button>
-          <button class="num-btn" data-num="9">9</button>
+      <!-- KANAN -->
+      <aside class="panel-right">
+        <div class="card card-players-panel">
+          <div class="card-label">Semua Pemain</div>
+          <div class="players-list" id="players-list"></div>
         </div>
 
-        <button class="btn-erase" id="erase-btn">
-          <span>⌫</span> Hapus
-        </button>
-
-        <div class="hint-card">
-          <div class="hint-icon">🕌</div>
-          <p class="hint-text">"Nilai ungkapan seseorang bukan terletak hanya sebatas pada kefasihan kata-kata, 
-            melainkan sejauh mana penghayatan atas maknanya"</p>
-          <p class="hint-attr">— KH. Khalil Bangkalan</p>
+        <div class="card card-numpad">
+          <div class="card-label">Pilih Angka</div>
+          <div class="numpad-grid" id="numpad-grid">
+            <button class="num-btn" data-num="1">1</button>
+            <button class="num-btn" data-num="2">2</button>
+            <button class="num-btn" data-num="3">3</button>
+            <button class="num-btn" data-num="4">4</button>
+            <button class="num-btn" data-num="5">5</button>
+            <button class="num-btn" data-num="6">6</button>
+            <button class="num-btn" data-num="7">7</button>
+            <button class="num-btn" data-num="8">8</button>
+            <button class="num-btn" data-num="9">9</button>
+          </div>
+          <button class="btn-delete" id="btn-delete">⌫ Hapus</button>
         </div>
       </aside>
 
-    </main>
-
-  </div>
-
-  <!-- POPUP OVERLAY -->
-  <div class="popup-overlay" id="popup-overlay">
-    <div class="popup-card" id="popup-card">
-      <div class="popup-icon" id="popup-icon">✓</div>
-      <div class="popup-title" id="popup-title">Tepat!</div>
-      <div class="popup-message" id="popup-message">Silakan ambil kertas dan cocokkan dengan angka yang kamu pilih</div>
-      <button class="popup-close" id="popup-close">Lanjutkan</button>
     </div>
   </div>
 
-  <!-- GAME OVER OVERLAY -->
-  <div class="popup-overlay" id="gameover-overlay">
-    <div class="popup-card gameover-card">
-      <div class="popup-icon gameover-icon">✗</div>
-      <div class="popup-title">Permainan Selesai</div>
-      <div class="popup-message" id="gameover-message">Jangan menyerah! Kesabaran adalah kunci keberhasilan.<br><br><em>— KH. Khalil Bangkalan</em></div>
-      <div class="istighfar-section" id="istighfar-section">
-        <div class="istighfar-progress" id="istighfar-progress">Istighfar: 0 / 10</div>
-        <button class="popup-close popup-alt" id="gameover-istighfar">Istighfar</button>
+  <!-- ======================== POPUPS ======================== -->
+
+  <!-- Popup Benar -->
+  <div class="overlay" id="overlay-correct" style="display:none;">
+    <div class="popup popup-correct">
+      <div class="popup-icon popup-icon-correct">✓</div>
+      <h2 class="popup-title">Tepat!</h2>
+      <div class="popup-message-box">Silakan ambil kertas dan cocokkan dengan angka yang kamu pilih</div>
+      <div class="popup-points" id="popup-points-text">+15 poin untuk Pemain</div>
+      <button class="btn-popup btn-popup-blue" id="btn-correct-continue">Lanjutkan</button>
+    </div>
+  </div>
+
+  <!-- Popup Nyawa Habis -->
+  <div class="overlay" id="overlay-lives" style="display:none;">
+    <div class="popup popup-lives">
+      <div class="popup-icon popup-icon-red">💔</div>
+      <h2 class="popup-title">Nyawa <span id="popup-lives-name"></span> Habis!</h2>
+      <div class="popup-lives-btns">
+        <button class="btn-popup btn-popup-gold" id="btn-do-istighfar">Lakukan Istighfar</button>
+        <button class="btn-popup btn-popup-gray" id="btn-skip-turn">Lewati Giliran</button>
       </div>
-      <button class="popup-close" id="gameover-restart">Coba Lagi</button>
     </div>
   </div>
 
-  <!-- WIN OVERLAY -->
-  <div class="popup-overlay" id="win-overlay">
-    <div class="popup-card win-card">
-      <div class="popup-icon win-icon">★</div>
-      <div class="popup-title">Selamat!</div>
-      <div class="popup-message">Kamu telah menyelesaikan perjalanan ini dengan penuh ketekunan dan ketelitian.</div>
-      <button class="popup-close" id="win-restart">Main Lagi</button>
+  <!-- Popup Istighfar -->
+  <div class="overlay" id="overlay-istighfar" style="display:none;">
+    <div class="popup popup-istighfar">
+      <div class="istighfar-arabic">أَسْتَغْفِرُ اللّٰهَ</div>
+      <div class="istighfar-transliteration">Astaghfirullah</div>
+      <div class="istighfar-counter" id="istighfar-counter">0 / 10</div>
+      <div class="istighfar-progress-bar-outer">
+        <div class="istighfar-progress-bar-inner" id="istighfar-progress"></div>
+      </div>
+      <button class="btn-istighfar" id="btn-istighfar-click">Istighfar</button>
+      <div class="istighfar-remaining" id="istighfar-remaining">Sisa kesempatan refill: 3/3</div>
+    </div>
+  </div>
+
+  <!-- Toast notif -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Popup Game Over -->
+  <div class="overlay" id="overlay-gameover" style="display:none;">
+    <div class="popup popup-gameover">
+      <div class="popup-icon popup-icon-red">✗</div>
+      <h2 class="popup-title">Permainan Selesai</h2>
+      <div class="popup-message-box">"Sabar itu separuh iman."<br><em>— KH. Khalil Bangkalan</em></div>
+      <button class="btn-popup btn-popup-blue" id="btn-gameover-retry">Coba Lagi</button>
+    </div>
+  </div>
+
+  <!-- Popup Menang -->
+  <div class="overlay" id="overlay-win" style="display:none;">
+    <div class="popup popup-win">
+      <div class="confetti-container" id="confetti-container"></div>
+      <div class="popup-icon popup-icon-gold">🏆</div>
+      <h2 class="popup-title win-title" id="win-title">Menang!</h2>
+      <div class="leaderboard" id="leaderboard"></div>
+      <button class="btn-popup btn-popup-blue" id="btn-win-again">Main Lagi</button>
     </div>
   </div>
 

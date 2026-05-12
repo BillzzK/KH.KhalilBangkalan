@@ -1,291 +1,41 @@
-/* ============================================================
-   PseudoKiai — script.js
-   Sudoku game with backtracking generator, highlighting,
-   mistake system, and popup feedback.
-   ============================================================ */
+/* =====================================================================
+   PseudoKiai — The Journey of KH. Khalil Bangkalan
+   Multiplayer Sudoku Game — script.js
+   ===================================================================== */
 
-// ── State ──────────────────────────────────────────────────
-let solution   = [];   // 9×9 complete solution
-let puzzle     = [];   // 9×9 puzzle (0 = empty)
-let userBoard  = [];   // 9×9 user input (0 = empty)
-let given      = [];   // 9×9 boolean: is cell given?
-
-let selectedRow    = -1;
-let selectedCol    = -1;
-let selectedNumber = null;
-let timerInterval  = null;
-let timerSeconds   = 0;
-let gameActive     = false;
-let istighfarCount = 0;
-
+// ======================== STATE ========================
 let players = [];
-let totalPlayers = 2;
 let currentPlayerIndex = 0;
-let advanceAfterPopup = false;
+let board = [];       // 9x9 current state (0 = empty)
+let solution = [];    // 9x9 solution
+let given = [];       // 9x9 boolean: is cell given?
+let selectedCell = null; // {row, col}
+let selectedNum = null;
+let timerInterval = null;
+let timerSeconds = 0;
+let totalEmpty = 0;
+let correctCount = 0;
+let istighfarCount = 0;
+let istighfarTarget = 10;
+let pendingLivesPlayerIdx = null;
 
-const STARTING_LIVES = 3;
-const MAX_REFILLS = 3;
-const ISTIGHFAR_TARGET = 10;
-const CORRECT_POINTS = 15;
-const WRONG_POINTS = -5;
-
-// ── DOM Refs ───────────────────────────────────────────────
-// (pindahkan inisialisasi DOM ke DOMContentLoaded)
-let board, mistakesDisplay, timerDisplay, newGameBtn, eraseBtn, numpad, numBtns;
-let playerCountInput, rollDiceBtn, currentPlayerName, playerList;
-let popupOverlay, popupClose, gameoverOverlay, gameoverRestart, gameoverIstighfar, winOverlay, winRestart;
-let gameoverMessage, istighfarProgress, istighfarSection;
-
-// ── Init ───────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  // init DOM refs here so mereka pasti ada
-  board            = document.getElementById('sudoku-board');
-  mistakesDisplay  = document.getElementById('mistakes-display');
-  timerDisplay     = document.getElementById('timer-display');
-  newGameBtn       = document.getElementById('new-game-btn');
-  eraseBtn         = document.getElementById('erase-btn');
-  numpad           = document.getElementById('numpad');
-  numBtns          = document.querySelectorAll('.num-btn');
-  playerCountInput = document.getElementById('player-count');
-  rollDiceBtn      = document.getElementById('roll-dice-btn');
-  currentPlayerName= document.getElementById('current-player-name');
-  playerList       = document.getElementById('player-list');
-
-  popupOverlay     = document.getElementById('popup-overlay');
-  popupClose       = document.getElementById('popup-close');
-  gameoverOverlay  = document.getElementById('gameover-overlay');
-  gameoverRestart  = document.getElementById('gameover-restart');
-  gameoverIstighfar = document.getElementById('gameover-istighfar');
-  gameoverMessage  = document.getElementById('gameover-message');
-  istighfarProgress = document.getElementById('istighfar-progress');
-  istighfarSection = document.getElementById('istighfar-section');
-  winOverlay       = document.getElementById('win-overlay');
-  winRestart       = document.getElementById('win-restart');
-
-  buildBoard();
-  startNewGame();
-  bindEvents();
-});
-
-function bindEvents() {
-  newGameBtn.addEventListener('click', startNewGame);
-  eraseBtn.addEventListener('click', eraseCell);
-  popupClose.addEventListener('click', handlePopupClose);
-  gameoverRestart.addEventListener('click', handleGameOverRestart);
-  gameoverIstighfar.addEventListener('click', handleIstighfarClick);
-  winRestart.addEventListener('click', startNewGame);
-  rollDiceBtn.addEventListener('click', chooseStartingPlayer);
-  playerCountInput.addEventListener('change', handlePlayerCountChange);
-
-  numBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const num = parseInt(btn.dataset.num);
-      selectNumber(num);
-    });
-  });
-
-  document.addEventListener('keydown', handleKeyDown);
+// ======================== SUDOKU GENERATOR ========================
+function generateFullBoard() {
+  const b = Array.from({length:9}, () => Array(9).fill(0));
+  fillBoard(b);
+  return b;
 }
 
-// ── Board DOM Construction ─────────────────────────────────
-function buildBoard() {
-  board.innerHTML = '';
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.dataset.row = r;
-      cell.dataset.col = c;
-
-      // Determine which 3×3 box
-      const boxRow = Math.floor(r / 3);
-      const boxCol = Math.floor(c / 3);
-      const boxIndex = boxRow * 3 + boxCol;
-      cell.classList.add(boxIndex % 2 === 0 ? 'box-even' : 'box-odd');
-
-      cell.addEventListener('click', () => handleCellClick(r, c));
-      board.appendChild(cell);
-    }
-  }
-}
-
-function getCellEl(r, c) {
-  return board.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-}
-
-// ── New Game ───────────────────────────────────────────────
-function startNewGame() {
-  closeOverlay(popupOverlay);
-  closeOverlay(gameoverOverlay);
-  closeOverlay(winOverlay);
-
-  selectedRow = -1;
-  selectedCol = -1;
-  selectedNumber = null;
-  timerSeconds = 0;
-  gameActive = true;
-  istighfarCount = 0;
-  advanceAfterPopup = false;
-  currentPlayerIndex = 0;
-
-  totalPlayers = Number(playerCountInput.value) || 2;
-  totalPlayers = Math.min(Math.max(totalPlayers, 1), 6);
-  playerCountInput.value = totalPlayers;
-
-  clearTimer();
-  clearNumSelection();
-  updateIstighfarDisplay();
-
-  createPlayers(totalPlayers, players);
-  updatePlayerDisplay();
-
-  // Generate
-  solution  = generateSolution();
-  puzzle    = createPuzzle(solution, 40); // remove ~40 cells
-  userBoard = puzzle.map(row => [...row]);
-  given     = puzzle.map(row => row.map(v => v !== 0));
-
-  renderBoard();
-  updatePlayerDisplay();
-  updateMistakeDisplay();
-  startTimer();
-}
-
-function handlePlayerCountChange() {
-  totalPlayers = Number(playerCountInput.value) || 2;
-  totalPlayers = Math.min(Math.max(totalPlayers, 1), 6);
-  playerCountInput.value = totalPlayers;
-  startNewGame();
-}
-
-function createPlayers(count, previousPlayers = []) {
-  players = [];
-  for (let i = 0; i < count; i++) {
-    const existing = previousPlayers[i];
-    players.push({
-      id: i + 1,
-      name: existing?.name || `Pemain ${i + 1}`,
-      score: 0,
-      lives: STARTING_LIVES,
-      refillsUsed: 0,
-      eliminated: false
-    });
-  }
-  currentPlayerIndex = 0;
-}
-
-function updatePlayerDisplay() {
-  playerList.innerHTML = '';
-  players.forEach((player, index) => {
-    const item = document.createElement('div');
-    item.className = 'player-item';
-    if (index === currentPlayerIndex) item.classList.add('active');
-
-    item.innerHTML = `
-      <div>
-        <input type="text" class="player-name-input" value="${player.name}" data-player-index="${index}" />
-        <span>Nilai: ${player.score}</span>
-        <span>Nyawa: ${player.lives}</span>
-        <span>Refill: ${player.refillsUsed} / ${MAX_REFILLS}</span>
-      </div>
-      <div>${player.eliminated ? 'KELUAR' : 'Aktif'}</div>
-    `;
-
-    const nameInput = item.querySelector('.player-name-input');
-    nameInput.addEventListener('input', (e) => {
-      const idx = Number(e.target.dataset.playerIndex);
-      players[idx].name = e.target.value.trim() || `Pemain ${idx + 1}`;
-      if (idx === currentPlayerIndex) {
-        currentPlayerName.textContent = players[idx].name;
-      }
-    });
-
-    playerList.appendChild(item);
-  });
-
-  if (players[currentPlayerIndex]) {
-    currentPlayerName.textContent = players[currentPlayerIndex].name;
-  } else {
-    currentPlayerName.textContent = 'Tidak Ada Pemain';
-  }
-}
-
-function chooseStartingPlayer() {
-  const active = getActivePlayerIndices();
-  if (active.length === 0) return;
-  const randomIndex = Math.floor(Math.random() * active.length);
-  currentPlayerIndex = active[randomIndex];
-  updatePlayerDisplay();
-  updateMistakeDisplay();
-}
-
-function handlePopupClose() {
-  closeOverlay(popupOverlay);
-  if (advanceAfterPopup) {
-    advanceAfterPopup = false;
-    nextTurn();
-  }
-}
-
-function getActivePlayerIndices() {
-  return players.reduce((acc, player, idx) => {
-    if (!player.eliminated) acc.push(idx);
-    return acc;
-  }, []);
-}
-
-function nextTurn() {
-  const active = getActivePlayerIndices();
-  if (active.length === 0) {
-    endGame();
-    return;
-  }
-
-  const currentIndex = active.indexOf(currentPlayerIndex);
-  if (currentIndex === -1) {
-    currentPlayerIndex = active[0];
-  } else {
-    currentPlayerIndex = active[(currentIndex + 1) % active.length];
-  }
-
-  updatePlayerDisplay();
-  updateMistakeDisplay();
-}
-
-function endGame() {
-  gameActive = false;
-  clearTimer();
-  const winner = players
-    .filter(p => !p.eliminated || p.score !== 0)
-    .sort((a, b) => b.score - a.score)[0];
-
-  if (winner) {
-    const titleEl = document.querySelector('#win-overlay .popup-title');
-    const messageEl = document.querySelector('#win-overlay .popup-message');
-    titleEl.textContent = 'Permainan Selesai';
-    messageEl.innerHTML = `Pemenang: <strong>${winner.name}</strong><br>Skor terbanyak: ${winner.score}`;
-    showOverlay(winOverlay);
-  }
-}
-
-// ── Sudoku Generator (backtracking) ───────────────────────
-function generateSolution() {
-  const grid = Array.from({ length: 9 }, () => Array(9).fill(0));
-  solveSudoku(grid, true);
-  return grid;
-}
-
-function solveSudoku(grid, randomize = false) {
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      if (grid[r][c] === 0) {
-        let nums = [1,2,3,4,5,6,7,8,9];
-        if (randomize) nums = shuffle(nums);
-        for (const num of nums) {
-          if (isValid(grid, r, c, num)) {
-            grid[r][c] = num;
-            if (solveSudoku(grid, randomize)) return true;
-            grid[r][c] = 0;
+function fillBoard(b) {
+  for (let r=0; r<9; r++) {
+    for (let c=0; c<9; c++) {
+      if (b[r][c] === 0) {
+        const nums = shuffle([1,2,3,4,5,6,7,8,9]);
+        for (const n of nums) {
+          if (isValid(b,r,c,n)) {
+            b[r][c] = n;
+            if (fillBoard(b)) return true;
+            b[r][c] = 0;
           }
         }
         return false;
@@ -295,412 +45,694 @@ function solveSudoku(grid, randomize = false) {
   return true;
 }
 
-function isValid(grid, row, col, num) {
-  // Row check
-  if (grid[row].includes(num)) return false;
-  // Col check
-  for (let r = 0; r < 9; r++) if (grid[r][col] === num) return false;
-  // Box check
-  const br = Math.floor(row / 3) * 3;
-  const bc = Math.floor(col / 3) * 3;
-  for (let r = br; r < br + 3; r++)
-    for (let c = bc; c < bc + 3; c++)
-      if (grid[r][c] === num) return false;
+function isValid(b, row, col, num) {
+  for (let i=0; i<9; i++) {
+    if (b[row][i] === num) return false;
+    if (b[i][col] === num) return false;
+  }
+  const br = Math.floor(row/3)*3, bc = Math.floor(col/3)*3;
+  for (let i=0; i<3; i++) for (let j=0; j<3; j++)
+    if (b[br+i][bc+j] === num) return false;
   return true;
 }
 
-function createPuzzle(sol, removeCount) {
-  const puzzle = sol.map(row => [...row]);
-  const cells  = shuffle([...Array(81).keys()]);
-  let removed  = 0;
-  for (const idx of cells) {
-    if (removed >= removeCount) break;
-    const r = Math.floor(idx / 9);
-    const c = idx % 9;
-    const backup = puzzle[r][c];
-    puzzle[r][c] = 0;
-    // Quick uniqueness check: just ensure still solvable (light check)
-    const test = puzzle.map(row => [...row]);
-    if (countSolutions(test) === 1) {
-      removed++;
-    } else {
-      puzzle[r][c] = backup;
-    }
-  }
-  return puzzle;
-}
-
-function countSolutions(grid, limit = 2) {
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      if (grid[r][c] === 0) {
-        let count = 0;
-        for (let num = 1; num <= 9; num++) {
-          if (isValid(grid, r, c, num)) {
-            grid[r][c] = num;
-            count += countSolutions(grid, limit);
-            grid[r][c] = 0;
-            if (count >= limit) return count;
-          }
-        }
-        return count;
-      }
-    }
-  }
-  return 1;
-}
-
 function shuffle(arr) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+  for (let i=arr.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
   }
-  return a;
+  return arr;
 }
 
-// ── Render Board ───────────────────────────────────────────
-function renderBoard() {
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      renderCell(r, c);
+function countSolutions(b, limit=2) {
+  let count = 0;
+  function solve() {
+    if (count >= limit) return;
+    for (let r=0; r<9; r++) {
+      for (let c=0; c<9; c++) {
+        if (b[r][c] === 0) {
+          for (let n=1; n<=9; n++) {
+            if (isValid(b,r,c,n)) {
+              b[r][c] = n;
+              solve();
+              b[r][c] = 0;
+            }
+          }
+          return;
+        }
+      }
     }
+    count++;
   }
-  updateHighlights();
+  solve();
+  return count;
 }
 
-function renderCell(r, c) {
-  const cell = getCellEl(r, c);
-  if (!cell) return;
+function createPuzzle() {
+  solution = generateFullBoard();
+  board = solution.map(r => [...r]);
+  given = Array.from({length:9}, () => Array(9).fill(false));
 
-  // Remove value classes
-  cell.classList.remove('given', 'filled-correct', 'filled-wrong');
-  cell.innerHTML = '';
-
-  const val = userBoard[r][c];
-  if (val !== 0) {
-    const span = document.createElement('span');
-    span.textContent = val;
-    cell.appendChild(span);
-
-    if (given[r][c]) {
-      cell.classList.add('given');
-    } else if (val === solution[r][c]) {
-      cell.classList.add('filled-correct');
+  let toRemove = 40;
+  let attempts = 0;
+  while (toRemove > 0 && attempts < 300) {
+    const r = Math.floor(Math.random()*9);
+    const c = Math.floor(Math.random()*9);
+    if (board[r][c] === 0) { attempts++; continue; }
+    const backup = board[r][c];
+    board[r][c] = 0;
+    const tmp = board.map(row => [...row]);
+    if (countSolutions(tmp) !== 1) {
+      board[r][c] = backup;
     } else {
-      cell.classList.add('filled-wrong');
+      toRemove--;
     }
+    attempts++;
   }
+
+  for (let r=0; r<9; r++) for (let c=0; c<9; c++)
+    given[r][c] = (board[r][c] !== 0);
+
+  totalEmpty = board.flat().filter(v => v === 0).length;
+  correctCount = 0;
 }
 
-// ── Highlight System ───────────────────────────────────────
-function updateHighlights() {
-  // Clear all highlights
-  document.querySelectorAll('.cell').forEach(cell => {
-    cell.classList.remove('selected', 'highlight-area', 'highlight-box', 'highlight-same');
+// ======================== DICE ========================
+const DICE_DOTS = {
+  1: [[50,50]],
+  2: [[25,25],[75,75]],
+  3: [[25,25],[50,50],[75,75]],
+  4: [[25,25],[75,25],[25,75],[75,75]],
+  5: [[25,25],[75,25],[50,50],[25,75],[75,75]],
+  6: [[25,25],[75,25],[25,50],[75,50],[25,75],[75,75]]
+};
+
+function renderDiceFace(value) {
+  const dots = DICE_DOTS[value] || [];
+  const g = document.getElementById('dice-dots');
+  g.innerHTML = dots.map(([cx,cy]) =>
+    `<circle cx="${cx}" cy="${cy}" r="7" fill="#fff" />`
+  ).join('');
+}
+
+// ======================== DOM HELPERS ========================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showOverlay(id) { document.getElementById(id).style.display = 'flex'; }
+function hideOverlay(id) { document.getElementById(id).style.display = 'none'; }
+
+function showToast(msg, duration=2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ======================== SCREEN 1: LOBBY ========================
+let playerCount = 2;
+
+function initLobby() {
+  const countBtns = document.querySelectorAll('.count-btn');
+  countBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      countBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      playerCount = parseInt(btn.dataset.count);
+      renderNameInputs();
+    });
   });
+  renderNameInputs();
 
-  if (selectedRow === -1) return;
+  document.getElementById('btn-start').addEventListener('click', startFromLobby);
+}
 
-  const boxRowStart = Math.floor(selectedRow / 3) * 3;
-  const boxColStart = Math.floor(selectedCol / 3) * 3;
-  const selectedVal = userBoard[selectedRow][selectedCol];
-
-  for (let r = 0; r < 9; r++) {
-    for (let c = 0; c < 9; c++) {
-      const cell = getCellEl(r, c);
-      if (!cell) continue;
-
-      const inRow  = r === selectedRow;
-      const inCol  = c === selectedCol;
-      const inBox  = r >= boxRowStart && r < boxRowStart + 3 &&
-                     c >= boxColStart && c < boxColStart + 3;
-
-      if (r === selectedRow && c === selectedCol) {
-        cell.classList.add('selected');
-      } else if (inBox) {
-        cell.classList.add('highlight-box');
-      } else if (inRow || inCol) {
-        cell.classList.add('highlight-area');
-      }
-
-      // Highlight same number
-      if (selectedVal !== 0 && userBoard[r][c] === selectedVal &&
-          !(r === selectedRow && c === selectedCol)) {
-        cell.classList.add('highlight-same');
-      }
-    }
+function renderNameInputs() {
+  const container = document.getElementById('player-names-container');
+  const existing = [];
+  container.querySelectorAll('.player-input').forEach(inp => existing.push(inp.value));
+  container.innerHTML = '';
+  for (let i=0; i<playerCount; i++) {
+    const row = document.createElement('div');
+    row.className = 'player-input-row';
+    row.style.animationDelay = `${i*0.06}s`;
+    row.innerHTML = `
+      <span class="player-input-label">Pemain ${i+1}</span>
+      <input class="player-input" type="text" maxlength="20"
+        placeholder="Nama Pemain ${i+1}" value="${existing[i] || ''}" />
+    `;
+    container.appendChild(row);
   }
 }
 
-// ── Cell Click ─────────────────────────────────────────────
-function handleCellClick(r, c) {
-  if (!gameActive) return;
-
-  selectedRow = r;
-  selectedCol = c;
-  updateHighlights();
-
-  // If a number is already selected, try to place it
-  if (selectedNumber !== null) {
-    placeNumber(r, c, selectedNumber);
-    clearNumSelection();
-  }
+function startFromLobby() {
+  const inputs = document.querySelectorAll('.player-input');
+  players = [];
+  inputs.forEach((inp, i) => {
+    const name = inp.value.trim() || `Pemain ${i+1}`;
+    players.push({ name, score:0, lives:3, mistakes:0, refillUsed:0, isSkipped:false });
+  });
+  initDiceScreen();
+  showScreen('screen-dice');
 }
 
-// ── Number Selection ───────────────────────────────────────
-function selectNumber(num) {
-  if (!gameActive) return;
-  selectedNumber = num;
-  numBtns.forEach(b => b.classList.remove('selected'));
+// ======================== SCREEN 2: DICE ROLL ========================
+let diceRolls = [];  // [{name, roll}]
+let diceCurrentIdx = 0;
 
-  if (selectedRow !== -1 && selectedCol !== -1) {
-    placeNumber(selectedRow, selectedCol, num);
-    clearNumSelection();
-  }
+function initDiceScreen() {
+  diceRolls = [];
+  diceCurrentIdx = 0;
+  document.getElementById('dice-results').innerHTML = '';
+  document.getElementById('dice-order').style.display = 'none';
+  renderDiceFace(1);
+  updateDiceTurnInfo();
+
+  document.getElementById('btn-roll').disabled = false;
+  document.getElementById('btn-roll').onclick = rollDice;
+  document.getElementById('btn-start-game').onclick = startGame;
 }
 
-function clearNumSelection() {
-  selectedNumber = null;
-  numBtns.forEach(b => b.classList.remove('selected'));
-}
-
-// ── Place Number ───────────────────────────────────────────
-function placeNumber(r, c, num) {
-  if (!gameActive) return;
-  const currentPlayer = players[currentPlayerIndex];
-  if (!currentPlayer || currentPlayer.eliminated) return;
-  if (given[r][c]) return;         // can't change given cells
-  if (userBoard[r][c] === solution[r][c] && userBoard[r][c] !== 0) return; // already correct
-
-  userBoard[r][c] = num;
-  renderCell(r, c);
-  updateHighlights();
-
-  if (num === solution[r][c]) {
-    currentPlayer.score += CORRECT_POINTS;
-    updatePlayerDisplay();
-
-    const cell = getCellEl(r, c);
-    cell.classList.add('pop-in');
-    setTimeout(() => cell.classList.remove('pop-in'), 300);
-
-    showCorrectPopup();
-    checkWin();
-    if (gameActive) {
-      advanceAfterPopup = true;
-    }
+function updateDiceTurnInfo() {
+  if (diceCurrentIdx < players.length) {
+    document.getElementById('dice-current-name').textContent = players[diceCurrentIdx].name;
+    document.getElementById('dice-turn-info').style.display = '';
   } else {
-    currentPlayer.score += WRONG_POINTS;
-    currentPlayer.lives = Math.max(0, currentPlayer.lives - 1);
-    updatePlayerDisplay();
+    document.getElementById('dice-turn-info').style.display = 'none';
+  }
+}
 
-    const cell = getCellEl(r, c);
-    cell.classList.add('flash-error');
-    setTimeout(() => {
-      cell.classList.remove('flash-error');
-      userBoard[r][c] = 0;
-      renderCell(r, c);
-      updateHighlights();
-    }, 600);
+async function rollDice() {
+  if (diceCurrentIdx >= players.length) return;
+  const btn = document.getElementById('btn-roll');
+  btn.disabled = true;
 
-    if (currentPlayer.lives <= 0) {
-      handlePlayerOutOfLives();
-    } else {
-      setTimeout(() => {
-        if (gameActive) nextTurn();
-      }, 700);
+  // Animate
+  const svg = document.getElementById('dice-svg');
+  svg.classList.add('rolling');
+  await sleep(800);
+  svg.classList.remove('rolling');
+
+  const roll = Math.ceil(Math.random()*6);
+  renderDiceFace(roll);
+
+  // Check for ties before pushing
+  diceRolls.push({ idx: diceCurrentIdx, name: players[diceCurrentIdx].name, roll });
+  renderDiceResults(diceRolls);
+
+  diceCurrentIdx++;
+  if (diceCurrentIdx < players.length) {
+    updateDiceTurnInfo();
+    btn.disabled = false;
+  } else {
+    // All rolled — handle ties
+    await resolveTies();
+  }
+}
+
+async function resolveTies() {
+  document.getElementById('dice-turn-info').style.display = 'none';
+
+  // Find ties for max position and cascade
+  let sorted = [...diceRolls].sort((a,b) => b.roll - a.roll);
+
+  // Check for any duplicates
+  let hasTies = false;
+  for (let i=0; i<sorted.length-1; i++) {
+    if (sorted[i].roll === sorted[i+1].roll) { hasTies = true; break; }
+  }
+
+  while (hasTies) {
+    // Find groups of ties
+    const groups = {};
+    for (const r of sorted) {
+      if (!groups[r.roll]) groups[r.roll] = [];
+      groups[r.roll].push(r);
+    }
+    // Find all tie groups (size > 1)
+    let tieGroup = null;
+    for (const k of Object.keys(groups).sort((a,b)=>b-a)) {
+      if (groups[k].length > 1) { tieGroup = groups[k]; break; }
+    }
+    if (!tieGroup) break;
+
+    showToast(`${tieGroup.map(t=>t.name).join(', ')} seri! Lempar ulang...`, 2500);
+    await sleep(2600);
+
+    for (const tied of tieGroup) {
+      document.getElementById('dice-turn-info').style.display = '';
+      document.getElementById('dice-current-name').textContent = tied.name;
+      await sleep(800);
+
+      const svg = document.getElementById('dice-svg');
+      svg.classList.add('rolling');
+      await sleep(800);
+      svg.classList.remove('rolling');
+
+      const newRoll = Math.ceil(Math.random()*6);
+      tied.roll = newRoll;
+      renderDiceFace(newRoll);
+      renderDiceResults(diceRolls);
+      await sleep(400);
+    }
+
+    sorted = [...diceRolls].sort((a,b) => b.roll - a.roll);
+    hasTies = false;
+    for (let i=0; i<sorted.length-1; i++) {
+      if (sorted[i].roll === sorted[i+1].roll) { hasTies = true; break; }
+    }
+  }
+
+  document.getElementById('dice-turn-info').style.display = 'none';
+
+  // Final order
+  sorted = [...diceRolls].sort((a,b) => b.roll - a.roll);
+  const orderedPlayers = sorted.map(r => players[r.idx]);
+  players = orderedPlayers;
+
+  // Show final order
+  const ol = document.getElementById('order-list');
+  ol.innerHTML = players.map((p,i) => `<li>${p.name}</li>`).join('');
+  document.getElementById('dice-order').style.display = 'block';
+}
+
+function renderDiceResults(rolls) {
+  const container = document.getElementById('dice-results');
+  container.innerHTML = rolls.map(r => `
+    <div class="dice-result-row">
+      <span class="dice-result-name">${r.name}</span>
+      <span class="dice-result-val">${r.roll}</span>
+    </div>
+  `).join('');
+}
+
+// ======================== SCREEN 3: GAME ========================
+function startGame() {
+  currentPlayerIndex = 0;
+  createPuzzle();
+  selectedCell = null;
+  selectedNum = null;
+
+  renderBoard();
+  renderPlayersPanel();
+  updateActivePlayerPanel();
+  updateProgress();
+  startTimer();
+
+  showScreen('screen-game');
+  updateTurnBadge();
+
+  // Keyboard
+  document.addEventListener('keydown', handleKeydown);
+
+  // Numpad
+  document.querySelectorAll('.num-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const n = parseInt(btn.dataset.num);
+      selectNum(n);
+      if (selectedCell) attemptInput(n);
+    });
+  });
+  document.getElementById('btn-delete').addEventListener('click', deleteCell);
+  document.getElementById('btn-new-game').addEventListener('click', goToLobby);
+  document.getElementById('btn-correct-continue').addEventListener('click', () => {
+    hideOverlay('overlay-correct');
+    nextTurn();
+  });
+  document.getElementById('btn-gameover-retry').addEventListener('click', goToLobby);
+  document.getElementById('btn-win-again').addEventListener('click', goToLobby);
+  document.getElementById('btn-do-istighfar').addEventListener('click', () => {
+    hideOverlay('overlay-lives');
+    openIstighfar();
+  });
+  document.getElementById('btn-skip-turn').addEventListener('click', () => {
+    hideOverlay('overlay-lives');
+    players[pendingLivesPlayerIdx].isSkipped = true;
+    nextTurn();
+  });
+  document.getElementById('btn-istighfar-click').addEventListener('click', doIstighfar);
+}
+
+function goToLobby() {
+  stopTimer();
+  document.removeEventListener('keydown', handleKeydown);
+  hideOverlay('overlay-correct');
+  hideOverlay('overlay-lives');
+  hideOverlay('overlay-istighfar');
+  hideOverlay('overlay-gameover');
+  hideOverlay('overlay-win');
+  showScreen('screen-lobby');
+}
+
+// ======================== BOARD RENDER ========================
+function renderBoard() {
+  const boardEl = document.getElementById('sudoku-board');
+  boardEl.innerHTML = '';
+  for (let r=0; r<9; r++) {
+    for (let c=0; c<9; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      // Box alternating
+      const boxIdx = Math.floor(r/3)*3 + Math.floor(c/3);
+      cell.classList.add(boxIdx%2===0 ? 'box-even' : 'box-odd');
+
+      if (given[r][c]) {
+        cell.classList.add('given');
+        cell.textContent = board[r][c];
+      } else if (board[r][c] !== 0) {
+        cell.classList.add('correct');
+        cell.textContent = board[r][c];
+      }
+
+      cell.addEventListener('click', () => onCellClick(r, c));
+      boardEl.appendChild(cell);
     }
   }
 }
 
-function handlePlayerOutOfLives() {
+function getCell(r, c) {
+  return document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+}
+
+function onCellClick(r, c) {
+  if (given[r][c]) {
+    selectedCell = {row:r, col:c};
+    applyHighlights();
+    return;
+  }
+  if (players[currentPlayerIndex].isSkipped) return;
+  selectedCell = {row:r, col:c};
+  applyHighlights();
+
+  if (selectedNum) {
+    attemptInput(selectedNum);
+  }
+}
+
+function applyHighlights() {
+  document.querySelectorAll('.cell').forEach(c => {
+    c.classList.remove('hl-area','hl-box','hl-sel','hl-same');
+  });
+  if (!selectedCell) return;
+  const {row, col} = selectedCell;
+  const val = board[row][col];
+
+  for (let r=0; r<9; r++) {
+    for (let c=0; c<9; c++) {
+      const cell = getCell(r,c);
+      if (!cell) continue;
+      // same box
+      const sameBox = Math.floor(r/3)===Math.floor(row/3) && Math.floor(c/3)===Math.floor(col/3);
+      if (r===row || c===col) cell.classList.add('hl-area');
+      if (sameBox)             cell.classList.add('hl-box');
+      if (val !== 0 && board[r][c]===val && !(r===row&&c===col)) cell.classList.add('hl-same');
+    }
+  }
+  getCell(row,col).classList.add('hl-sel');
+}
+
+function selectNum(n) {
+  selectedNum = n;
+  document.querySelectorAll('.num-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.dataset.num)===n);
+  });
+}
+
+function deleteCell() {
+  if (!selectedCell) return;
+  const {row, col} = selectedCell;
+  if (given[row][col]) return;
+  if (board[row][col] === 0) return;
+  board[row][col] = 0;
+  correctCount--;
+  const cell = getCell(row,col);
+  cell.textContent = '';
+  cell.classList.remove('correct');
+  applyHighlights();
+  updateProgress();
+}
+
+function attemptInput(num) {
+  if (!selectedCell) return;
+  const {row, col} = selectedCell;
+  if (given[row][col]) return;
+  if (board[row][col] !== 0) return; // already filled, don't allow
+
   const player = players[currentPlayerIndex];
-  gameActive = false;
-  updatePlayerDisplay();
+  const cell = getCell(row, col);
 
-  if (player.refillsUsed < MAX_REFILLS) {
-    istighfarCount = 0;
-    updateIstighfarDisplay();
-    openGameOverMenu();
+  if (num === solution[row][col]) {
+    // Correct
+    board[row][col] = num;
+    correctCount++;
+    cell.textContent = num;
+    cell.classList.remove('wrong');
+    cell.classList.add('correct');
+
+    applyHighlights();
+    updateProgress();
+
+    // Show popup
+    document.getElementById('popup-points-text').textContent = `+15 poin untuk ${player.name}`;
+    player.score += 15;
+    renderPlayersPanel();
+    updateActivePlayerPanel();
+
+    // Check win
+    if (correctCount === totalEmpty) {
+      setTimeout(showWin, 600);
+      return;
+    }
+
+    showOverlay('overlay-correct');
+
+  } else {
+    // Wrong
+    player.score = Math.max(0, player.score - 5);
+    player.lives--;
+    player.mistakes++;
+    cell.classList.add('wrong');
+    setTimeout(() => cell.classList.remove('wrong'), 500);
+    renderPlayersPanel();
+    updateActivePlayerPanel();
+    showToast(`-5 poin · Nyawa berkurang`, 2000);
+
+    if (player.lives <= 0) {
+      player.lives = 0;
+      pendingLivesPlayerIdx = currentPlayerIndex;
+      setTimeout(() => {
+        document.getElementById('popup-lives-name').textContent = player.name;
+        const hasRefill = player.refillUsed < 3;
+        document.getElementById('btn-do-istighfar').style.display = hasRefill ? '' : 'none';
+        showOverlay('overlay-lives');
+      }, 600);
+    } else {
+      // Shift turn after wrong
+      setTimeout(() => nextTurn(), 700);
+    }
+  }
+}
+
+// ======================== TURN SYSTEM ========================
+function nextTurn() {
+  // Check game over: all skipped
+  const allSkipped = players.every(p => p.isSkipped || p.lives <= 0);
+  if (allSkipped) {
+    showGameOver();
+    return;
+  }
+  // Advance index
+  do {
+    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    const p = players[currentPlayerIndex];
+    if (p.lives <= 0) p.isSkipped = true;
+    if (p.isSkipped) {
+      showToast(`${p.name} di-skip (nyawa habis)`, 1600);
+    }
+  } while (players[currentPlayerIndex].isSkipped && !players.every(p => p.isSkipped));
+
+  if (players.every(p => p.isSkipped)) {
+    showGameOver();
     return;
   }
 
-  player.eliminated = true;
-  updatePlayerDisplay();
-  const activePlayers = getActivePlayerIndices();
+  updateTurnBadge();
+  updateActivePlayerPanel();
+  renderPlayersPanel();
+  selectedCell = null;
+  selectedNum = null;
+  applyHighlights();
+  document.querySelectorAll('.num-btn').forEach(b => b.classList.remove('selected'));
+}
 
-  gameoverMessage.innerHTML = `Pemain <strong>${player.name}</strong> sudah kehabisan nyawa dan tidak bisa lagi bermain.`;
-  istighfarSection.style.display = 'none';
-  gameoverIstighfar.disabled = true;
-  gameoverIstighfar.classList.add('disabled');
-  gameoverRestart.textContent = 'Lanjutkan';
-  showOverlay(gameoverOverlay);
+function updateTurnBadge() {
+  document.getElementById('turn-name').textContent = players[currentPlayerIndex].name;
+}
 
-  if (activePlayers.length === 0) {
-    endGame();
+// ======================== PLAYERS PANEL ========================
+function renderPlayersPanel() {
+  const list = document.getElementById('players-list');
+  list.innerHTML = players.map((p, i) => {
+    const isActive = i === currentPlayerIndex;
+    const hearts = Array(3).fill(0).map((_,j) => j < p.lives ? '❤️' : '🖤').join('');
+    const canRefill = p.lives <= 0 && p.refillUsed < 3;
+    return `
+      <div class="player-card ${isActive?'active-turn':''} ${p.isSkipped?'skipped':''}">
+        ${isActive ? '<span class="badge-turn">GILIRAN</span>' : ''}
+        ${p.isSkipped ? '<span class="badge-skip">SKIP</span>' : ''}
+        <div class="player-card-name">${p.name}</div>
+        <div class="player-card-lives">${hearts}</div>
+        <div class="player-card-score">${p.score} <small style="font-size:11px;color:#9aa5b8">poin</small></div>
+        ${canRefill ? `<button class="btn-refill" onclick="triggerRefillFor(${i})">🌙 Istighfar</button>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+window.triggerRefillFor = function(idx) {
+  pendingLivesPlayerIdx = idx;
+  openIstighfar();
+};
+
+function updateActivePlayerPanel() {
+  const p = players[currentPlayerIndex];
+  document.getElementById('active-player-name').textContent = p.name;
+  document.getElementById('active-player-lives').textContent = Array(3).fill(0).map((_,j) => j < p.lives ? '❤️' : '🖤').join('');
+  document.getElementById('active-player-score').textContent = p.score;
+}
+
+// ======================== ISTIGHFAR ========================
+function openIstighfar() {
+  istighfarCount = 0;
+  const p = players[pendingLivesPlayerIdx];
+  document.getElementById('istighfar-counter').textContent = `0 / ${istighfarTarget}`;
+  document.getElementById('istighfar-progress').style.width = '0%';
+  document.getElementById('istighfar-remaining').textContent =
+    `Sisa kesempatan refill: ${3 - p.refillUsed}/3`;
+  showOverlay('overlay-istighfar');
+}
+
+function doIstighfar() {
+  if (istighfarCount >= istighfarTarget) return;
+  istighfarCount++;
+  document.getElementById('istighfar-counter').textContent = `${istighfarCount} / ${istighfarTarget}`;
+  document.getElementById('istighfar-progress').style.width = `${(istighfarCount/istighfarTarget)*100}%`;
+
+  if (istighfarCount >= istighfarTarget) {
+    const p = players[pendingLivesPlayerIdx];
+    p.lives = 3;
+    p.isSkipped = false;
+    p.refillUsed++;
+    renderPlayersPanel();
+    updateActivePlayerPanel();
+    setTimeout(() => {
+      hideOverlay('overlay-istighfar');
+      showToast(`${p.name} nyawa penuh! Bismillah 🌙`, 2000);
+      // If this was the active player needing refill, don't auto-next
+    }, 400);
   }
 }
 
-function handleGameOverRestart() {
-  closeOverlay(gameoverOverlay);
-  if (!gameActive) gameActive = true;
-  nextTurn();
-}
-
-// ── Erase ──────────────────────────────────────────────────
-function eraseCell() {
-  if (!gameActive || selectedRow === -1) return;
-  if (given[selectedRow][selectedCol]) return;
-  userBoard[selectedRow][selectedCol] = 0;
-  renderCell(selectedRow, selectedCol);
-  updateHighlights();
-}
-
-// ── Keyboard Input ─────────────────────────────────────────
-function handleKeyDown(e) {
-  if (!gameActive) return;
-
-  if (e.key >= '1' && e.key <= '9') {
-    selectNumber(parseInt(e.key));
-    return;
-  }
-  if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
-    eraseCell();
-    return;
-  }
-  if (e.key === 'Escape') { clearNumSelection(); return; }
-
-  // Arrow navigation
-  if (selectedRow === -1) { selectedRow = 0; selectedCol = 0; }
-  let nr = selectedRow, nc = selectedCol;
-  if (e.key === 'ArrowUp')    nr = Math.max(0, nr - 1);
-  if (e.key === 'ArrowDown')  nr = Math.min(8, nr + 1);
-  if (e.key === 'ArrowLeft')  nc = Math.max(0, nc - 1);
-  if (e.key === 'ArrowRight') nc = Math.min(8, nc + 1);
-
-  if (nr !== selectedRow || nc !== selectedCol) {
-    selectedRow = nr; selectedCol = nc;
-    updateHighlights();
-    e.preventDefault();
-  }
-}
-
-// ── Mistake Display ────────────────────────────────────────
-function updateMistakeDisplay() {
-  const player = players[currentPlayerIndex];
-  const lives = player ? player.lives : 0;
-  mistakesDisplay.textContent = `${lives} / ${STARTING_LIVES}`;
-  for (let i = 1; i <= STARTING_LIVES; i++) {
-    const dot = document.getElementById(`dot-${i}`);
-    dot.classList.toggle('active', i <= lives);
-  }
-}
-
-// ── Timer ──────────────────────────────────────────────────
+// ======================== TIMER ========================
 function startTimer() {
-  clearTimer();
+  stopTimer();
+  timerSeconds = 0;
+  updateTimerDisplay();
   timerInterval = setInterval(() => {
     timerSeconds++;
-    const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
-    const s = String(timerSeconds % 60).padStart(2, '0');
-    timerDisplay.textContent = `${m}:${s}`;
+    updateTimerDisplay();
   }, 1000);
 }
 
-function clearTimer() {
-  if (timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
-  timerDisplay.textContent = '00:00';
-  timerSeconds = 0;
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 }
 
-// ── Popup Helpers ──────────────────────────────────────────
-function showOverlay(el)  { el.classList.add('active'); }
-function closeOverlay(el) { el.classList.remove('active'); }
-
-function showCorrectPopup() {
-  const iconEl = document.getElementById('popup-icon');
-  const titleEl = document.getElementById('popup-title');
-  const msgEl = document.getElementById('popup-message');
-
-  iconEl.textContent = '✓';
-  titleEl.textContent = 'Tepat!';
-  msgEl.innerHTML = 'Silakan ambil kertas dan cocokkan dengan angka yang kamu pilih';
-
-  showOverlay(popupOverlay);
+function updateTimerDisplay() {
+  const m = String(Math.floor(timerSeconds/60)).padStart(2,'0');
+  const s = String(timerSeconds%60).padStart(2,'0');
+  document.getElementById('timer-display').textContent = `${m}:${s}`;
 }
 
-function gameOver() {
-  gameActive = false;
-  clearTimer();
-  setTimeout(openGameOverMenu, 400);
+// ======================== PROGRESS ========================
+function updateProgress() {
+  const filled = correctCount;
+  const total = totalEmpty;
+  document.getElementById('progress-info').textContent = `${filled} / ${total} terisi`;
+  const pct = total ? (filled/total)*100 : 0;
+  document.getElementById('progress-bar-inner').style.width = `${pct}%`;
 }
 
-function openGameOverMenu() {
-  const player = players[currentPlayerIndex];
-  const hasBonus = player && player.refillsUsed < MAX_REFILLS;
-  gameoverMessage.innerHTML = hasBonus
-    ? `Kesalahanmu sudah mencapai batas. Kamu bisa mendapat satu nyawa lagi jika melakukan <strong>istighfar ${ISTIGHFAR_TARGET}x</strong>.`
-    : `Kesalahanmu sudah mencapai batas dan kesempatan tambahan sudah habis.`;
+// ======================== KEYBOARD ========================
+function handleKeydown(e) {
+  if (!selectedCell) return;
+  const {row, col} = selectedCell;
 
-  istighfarSection.style.display = hasBonus ? 'block' : 'none';
-  gameoverIstighfar.disabled = !hasBonus;
-  gameoverIstighfar.classList.toggle('disabled', !hasBonus);
-  gameoverRestart.textContent = hasBonus ? 'Lewati Giliran' : 'Lanjutkan';
-  gameoverOverlay.querySelector('.popup-card').classList.remove('bonus-active');
-  updateIstighfarDisplay();
-  showOverlay(gameoverOverlay);
+  if (e.key >= '1' && e.key <= '9') {
+    const n = parseInt(e.key);
+    selectNum(n);
+    attemptInput(n);
+  } else if (e.key === 'Backspace' || e.key === 'Delete') {
+    deleteCell();
+  } else if (e.key === 'ArrowUp'    && row>0) { selectedCell={row:row-1,col}; applyHighlights(); }
+  else if (e.key === 'ArrowDown'  && row<8) { selectedCell={row:row+1,col}; applyHighlights(); }
+  else if (e.key === 'ArrowLeft'  && col>0) { selectedCell={row,col:col-1}; applyHighlights(); }
+  else if (e.key === 'ArrowRight' && col<8) { selectedCell={row,col:col+1}; applyHighlights(); }
 }
 
-function handleIstighfarClick() {
-  const player = players[currentPlayerIndex];
-  if (!player || player.refillsUsed >= MAX_REFILLS) return;
+// ======================== GAME OVER / WIN ========================
+function showGameOver() {
+  stopTimer();
+  setTimeout(() => showOverlay('overlay-gameover'), 400);
+}
 
-  istighfarCount++;
-  updateIstighfarDisplay();
+function showWin() {
+  stopTimer();
+  // Sort leaderboard
+  const sorted = [...players].sort((a,b) => b.score - a.score);
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('win-title').textContent =
+    `🏆 ${sorted[0].name} Menang!`;
+  document.getElementById('leaderboard').innerHTML = sorted.map((p,i) => `
+    <div class="leaderboard-row">
+      <span class="lb-medal">${medals[i] || `${i+1}.`}</span>
+      <span class="lb-name">${p.name}</span>
+      <span class="lb-lives">${Array(3).fill(0).map((_,j)=>j<p.lives?'❤️':'🖤').join('')}</span>
+      <span class="lb-score">${p.score}</span>
+    </div>
+  `).join('');
+  spawnConfetti();
+  showOverlay('overlay-win');
+}
 
-  if (istighfarCount >= ISTIGHFAR_TARGET) {
-    grantExtraLife();
+function spawnConfetti() {
+  const container = document.getElementById('confetti-container');
+  container.innerHTML = '';
+  const colors = ['#3a7ab5','#c9993a','#3a9e6a','#e05252','#7ab3d9','#f0d89a','#2563a8'];
+  for (let i=0; i<60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = `${Math.random()*100}%`;
+    piece.style.background = colors[Math.floor(Math.random()*colors.length)];
+    piece.style.animationDuration = `${1.5 + Math.random()*2}s`;
+    piece.style.animationDelay = `${Math.random()*1.2}s`;
+    piece.style.width = `${6+Math.random()*8}px`;
+    piece.style.height = `${6+Math.random()*8}px`;
+    piece.style.borderRadius = Math.random()>0.5 ? '50%' : '2px';
+    container.appendChild(piece);
   }
 }
 
-function updateIstighfarDisplay() {
-  if (!istighfarSection) return;
-  istighfarProgress.textContent = `Istighfar: ${istighfarCount} / ${ISTIGHFAR_TARGET}`;
-}
+// ======================== UTIL ========================
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function grantExtraLife() {
-  const player = players[currentPlayerIndex];
-  if (!player) return;
-
-  player.refillsUsed += 1;
-  player.lives = Math.max(player.lives, 1);
-  updatePlayerDisplay();
-
-  gameoverMessage.innerHTML = 'Alhamdulillah! Nyawamu kembali. Klik Lanjutkan untuk melanjutkan giliran berikutnya.';
-  istighfarSection.style.display = 'none';
-  gameoverIstighfar.disabled = true;
-  gameoverIstighfar.classList.add('disabled');
-  gameoverRestart.textContent = 'Lanjutkan';
-  gameoverOverlay.querySelector('.popup-card').classList.add('bonus-active');
-}
-
-function checkWin() {
-  for (let r = 0; r < 9; r++)
-    for (let c = 0; c < 9; c++)
-      if (userBoard[r][c] !== solution[r][c]) return;
-
-  // All correct!
-  gameActive = false;
-  clearTimer();
-  closeOverlay(popupOverlay);
-  setTimeout(() => {
-    const best = [...players].sort((a, b) => b.score - a.score)[0];
-    const titleEl = document.querySelector('#win-overlay .popup-title');
-    const messageEl = document.querySelector('#win-overlay .popup-message');
-    titleEl.textContent = 'Selamat! Permainan selesai.';
-    messageEl.innerHTML = `Pemenang: <strong>${best.name}</strong><br>Skor: ${best.score}`;
-    showOverlay(winOverlay);
-  }, 300);
-}
+// ======================== INIT ========================
+document.addEventListener('DOMContentLoaded', () => {
+  initLobby();
+  renderDiceFace(1);
+});
