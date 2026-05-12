@@ -13,19 +13,26 @@ let given      = [];   // 9×9 boolean: is cell given?
 let selectedRow    = -1;
 let selectedCol    = -1;
 let selectedNumber = null;
-let mistakes       = 0;
 let timerInterval  = null;
 let timerSeconds   = 0;
 let gameActive     = false;
 let istighfarCount = 0;
-let hasExtraLifeUsed = false;
 
-const MAX_MISTAKES = 3;
+let players = [];
+let totalPlayers = 2;
+let currentPlayerIndex = 0;
+let advanceAfterPopup = false;
+
+const STARTING_LIVES = 3;
+const MAX_REFILLS = 3;
 const ISTIGHFAR_TARGET = 10;
+const CORRECT_POINTS = 15;
+const WRONG_POINTS = -5;
 
 // ── DOM Refs ───────────────────────────────────────────────
 // (pindahkan inisialisasi DOM ke DOMContentLoaded)
 let board, mistakesDisplay, timerDisplay, newGameBtn, eraseBtn, numpad, numBtns;
+let playerCountInput, rollDiceBtn, currentPlayerName, playerList;
 let popupOverlay, popupClose, gameoverOverlay, gameoverRestart, gameoverIstighfar, winOverlay, winRestart;
 let gameoverMessage, istighfarProgress, istighfarSection;
 
@@ -39,6 +46,10 @@ document.addEventListener('DOMContentLoaded', () => {
   eraseBtn         = document.getElementById('erase-btn');
   numpad           = document.getElementById('numpad');
   numBtns          = document.querySelectorAll('.num-btn');
+  playerCountInput = document.getElementById('player-count');
+  rollDiceBtn      = document.getElementById('roll-dice-btn');
+  currentPlayerName= document.getElementById('current-player-name');
+  playerList       = document.getElementById('player-list');
 
   popupOverlay     = document.getElementById('popup-overlay');
   popupClose       = document.getElementById('popup-close');
@@ -59,10 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
 function bindEvents() {
   newGameBtn.addEventListener('click', startNewGame);
   eraseBtn.addEventListener('click', eraseCell);
-  popupClose.addEventListener('click', () => closeOverlay(popupOverlay));
-  gameoverRestart.addEventListener('click', startNewGame);
+  popupClose.addEventListener('click', handlePopupClose);
+  gameoverRestart.addEventListener('click', handleGameOverRestart);
   gameoverIstighfar.addEventListener('click', handleIstighfarClick);
   winRestart.addEventListener('click', startNewGame);
+  rollDiceBtn.addEventListener('click', chooseStartingPlayer);
+  playerCountInput.addEventListener('change', handlePlayerCountChange);
 
   numBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -106,19 +119,25 @@ function startNewGame() {
   closeOverlay(gameoverOverlay);
   closeOverlay(winOverlay);
 
-  mistakes = 0;
   selectedRow = -1;
   selectedCol = -1;
   selectedNumber = null;
   timerSeconds = 0;
   gameActive = true;
   istighfarCount = 0;
-  hasExtraLifeUsed = false;
+  advanceAfterPopup = false;
+  currentPlayerIndex = 0;
+
+  totalPlayers = Number(playerCountInput.value) || 2;
+  totalPlayers = Math.min(Math.max(totalPlayers, 1), 6);
+  playerCountInput.value = totalPlayers;
 
   clearTimer();
-  updateMistakeDisplay();
   clearNumSelection();
   updateIstighfarDisplay();
+
+  createPlayers(totalPlayers, players);
+  updatePlayerDisplay();
 
   // Generate
   solution  = generateSolution();
@@ -127,7 +146,126 @@ function startNewGame() {
   given     = puzzle.map(row => row.map(v => v !== 0));
 
   renderBoard();
+  updatePlayerDisplay();
+  updateMistakeDisplay();
   startTimer();
+}
+
+function handlePlayerCountChange() {
+  totalPlayers = Number(playerCountInput.value) || 2;
+  totalPlayers = Math.min(Math.max(totalPlayers, 1), 6);
+  playerCountInput.value = totalPlayers;
+  startNewGame();
+}
+
+function createPlayers(count, previousPlayers = []) {
+  players = [];
+  for (let i = 0; i < count; i++) {
+    const existing = previousPlayers[i];
+    players.push({
+      id: i + 1,
+      name: existing?.name || `Pemain ${i + 1}`,
+      score: 0,
+      lives: STARTING_LIVES,
+      refillsUsed: 0,
+      eliminated: false
+    });
+  }
+  currentPlayerIndex = 0;
+}
+
+function updatePlayerDisplay() {
+  playerList.innerHTML = '';
+  players.forEach((player, index) => {
+    const item = document.createElement('div');
+    item.className = 'player-item';
+    if (index === currentPlayerIndex) item.classList.add('active');
+
+    item.innerHTML = `
+      <div>
+        <input type="text" class="player-name-input" value="${player.name}" data-player-index="${index}" />
+        <span>Nilai: ${player.score}</span>
+        <span>Nyawa: ${player.lives}</span>
+        <span>Refill: ${player.refillsUsed} / ${MAX_REFILLS}</span>
+      </div>
+      <div>${player.eliminated ? 'KELUAR' : 'Aktif'}</div>
+    `;
+
+    const nameInput = item.querySelector('.player-name-input');
+    nameInput.addEventListener('input', (e) => {
+      const idx = Number(e.target.dataset.playerIndex);
+      players[idx].name = e.target.value.trim() || `Pemain ${idx + 1}`;
+      if (idx === currentPlayerIndex) {
+        currentPlayerName.textContent = players[idx].name;
+      }
+    });
+
+    playerList.appendChild(item);
+  });
+
+  if (players[currentPlayerIndex]) {
+    currentPlayerName.textContent = players[currentPlayerIndex].name;
+  } else {
+    currentPlayerName.textContent = 'Tidak Ada Pemain';
+  }
+}
+
+function chooseStartingPlayer() {
+  const active = getActivePlayerIndices();
+  if (active.length === 0) return;
+  const randomIndex = Math.floor(Math.random() * active.length);
+  currentPlayerIndex = active[randomIndex];
+  updatePlayerDisplay();
+  updateMistakeDisplay();
+}
+
+function handlePopupClose() {
+  closeOverlay(popupOverlay);
+  if (advanceAfterPopup) {
+    advanceAfterPopup = false;
+    nextTurn();
+  }
+}
+
+function getActivePlayerIndices() {
+  return players.reduce((acc, player, idx) => {
+    if (!player.eliminated) acc.push(idx);
+    return acc;
+  }, []);
+}
+
+function nextTurn() {
+  const active = getActivePlayerIndices();
+  if (active.length === 0) {
+    endGame();
+    return;
+  }
+
+  const currentIndex = active.indexOf(currentPlayerIndex);
+  if (currentIndex === -1) {
+    currentPlayerIndex = active[0];
+  } else {
+    currentPlayerIndex = active[(currentIndex + 1) % active.length];
+  }
+
+  updatePlayerDisplay();
+  updateMistakeDisplay();
+}
+
+function endGame() {
+  gameActive = false;
+  clearTimer();
+  const winner = players
+    .filter(p => !p.eliminated || p.score !== 0)
+    .sort((a, b) => b.score - a.score)[0];
+
+  if (winner) {
+    const titleEl = document.querySelector('#win-overlay .popup-title');
+    const messageEl = document.querySelector('#win-overlay .popup-message');
+    titleEl.textContent = 'Permainan Selesai';
+    messageEl.innerHTML = `Pemenang: <strong>${winner.name}</strong><br>Skor terbanyak: ${winner.score}`;
+    showOverlay(winOverlay);
+  }
 }
 
 // ── Sudoku Generator (backtracking) ───────────────────────
@@ -329,6 +467,9 @@ function clearNumSelection() {
 
 // ── Place Number ───────────────────────────────────────────
 function placeNumber(r, c, num) {
+  if (!gameActive) return;
+  const currentPlayer = players[currentPlayerIndex];
+  if (!currentPlayer || currentPlayer.eliminated) return;
   if (given[r][c]) return;         // can't change given cells
   if (userBoard[r][c] === solution[r][c] && userBoard[r][c] !== 0) return; // already correct
 
@@ -337,32 +478,74 @@ function placeNumber(r, c, num) {
   updateHighlights();
 
   if (num === solution[r][c]) {
-    // Correct
+    currentPlayer.score += CORRECT_POINTS;
+    updatePlayerDisplay();
+
     const cell = getCellEl(r, c);
     cell.classList.add('pop-in');
     setTimeout(() => cell.classList.remove('pop-in'), 300);
 
     showCorrectPopup();
     checkWin();
+    if (gameActive) {
+      advanceAfterPopup = true;
+    }
   } else {
-    // Wrong
-    mistakes++;
-    updateMistakeDisplay();
+    currentPlayer.score += WRONG_POINTS;
+    currentPlayer.lives = Math.max(0, currentPlayer.lives - 1);
+    updatePlayerDisplay();
 
     const cell = getCellEl(r, c);
     cell.classList.add('flash-error');
     setTimeout(() => {
       cell.classList.remove('flash-error');
-      // Reset cell back to empty after flash
       userBoard[r][c] = 0;
       renderCell(r, c);
       updateHighlights();
     }, 600);
 
-    if (mistakes >= MAX_MISTAKES) {
-      gameOver();
+    if (currentPlayer.lives <= 0) {
+      handlePlayerOutOfLives();
+    } else {
+      setTimeout(() => {
+        if (gameActive) nextTurn();
+      }, 700);
     }
   }
+}
+
+function handlePlayerOutOfLives() {
+  const player = players[currentPlayerIndex];
+  gameActive = false;
+  updatePlayerDisplay();
+
+  if (player.refillsUsed < MAX_REFILLS) {
+    istighfarCount = 0;
+    updateIstighfarDisplay();
+    openGameOverMenu();
+    return;
+  }
+
+  player.eliminated = true;
+  updatePlayerDisplay();
+  const activePlayers = getActivePlayerIndices();
+
+  gameoverMessage.innerHTML = `Pemain <strong>${player.name}</strong> sudah kehabisan nyawa dan tidak bisa lagi bermain.`;
+  istighfarSection.style.display = 'none';
+  gameoverIstighfar.disabled = true;
+  gameoverIstighfar.classList.add('disabled');
+  gameoverRestart.textContent = 'Lanjutkan';
+  showOverlay(gameoverOverlay);
+
+  if (activePlayers.length === 0) {
+    endGame();
+  }
+}
+
+function handleGameOverRestart() {
+  closeOverlay(gameoverOverlay);
+  if (!gameActive) gameActive = true;
+  nextTurn();
 }
 
 // ── Erase ──────────────────────────────────────────────────
@@ -405,10 +588,12 @@ function handleKeyDown(e) {
 
 // ── Mistake Display ────────────────────────────────────────
 function updateMistakeDisplay() {
-  mistakesDisplay.textContent = `${mistakes} / ${MAX_MISTAKES}`;
-  for (let i = 1; i <= 3; i++) {
+  const player = players[currentPlayerIndex];
+  const lives = player ? player.lives : 0;
+  mistakesDisplay.textContent = `${lives} / ${STARTING_LIVES}`;
+  for (let i = 1; i <= STARTING_LIVES; i++) {
     const dot = document.getElementById(`dot-${i}`);
-    dot.classList.toggle('active', i <= mistakes);
+    dot.classList.toggle('active', i <= lives);
   }
 }
 
@@ -453,21 +638,24 @@ function gameOver() {
 }
 
 function openGameOverMenu() {
-  const hasBonus = !hasExtraLifeUsed;
+  const player = players[currentPlayerIndex];
+  const hasBonus = player && player.refillsUsed < MAX_REFILLS;
   gameoverMessage.innerHTML = hasBonus
-    ? 'Kesalahanmu sudah mencapai batas. Kamu bisa mendapat satu nyawa lagi jika melakukan <strong>istighfar 10x</strong>.'
-    : 'Kesalahanmu sudah mencapai batas dan kesempatan tambahan sudah habis. Yuk coba lagi dan tetap sabar.';
+    ? `Kesalahanmu sudah mencapai batas. Kamu bisa mendapat satu nyawa lagi jika melakukan <strong>istighfar ${ISTIGHFAR_TARGET}x</strong>.`
+    : `Kesalahanmu sudah mencapai batas dan kesempatan tambahan sudah habis.`;
 
   istighfarSection.style.display = hasBonus ? 'block' : 'none';
-  gameoverIstighfar.disabled = false;
-  gameoverIstighfar.classList.remove('disabled');
+  gameoverIstighfar.disabled = !hasBonus;
+  gameoverIstighfar.classList.toggle('disabled', !hasBonus);
+  gameoverRestart.textContent = hasBonus ? 'Lewati Giliran' : 'Lanjutkan';
   gameoverOverlay.querySelector('.popup-card').classList.remove('bonus-active');
   updateIstighfarDisplay();
   showOverlay(gameoverOverlay);
 }
 
 function handleIstighfarClick() {
-  if (hasExtraLifeUsed) return;
+  const player = players[currentPlayerIndex];
+  if (!player || player.refillsUsed >= MAX_REFILLS) return;
 
   istighfarCount++;
   updateIstighfarDisplay();
@@ -483,18 +671,19 @@ function updateIstighfarDisplay() {
 }
 
 function grantExtraLife() {
-  hasExtraLifeUsed = true;
-  mistakes = MAX_MISTAKES - 1;
-  updateMistakeDisplay();
-  gameActive = true;
+  const player = players[currentPlayerIndex];
+  if (!player) return;
 
-  gameoverMessage.innerHTML = 'Alhamdulillah! Kamu mendapat satu nyawa lagi. Yuk lanjutkan permainan dengan hati tenang.';
+  player.refillsUsed += 1;
+  player.lives = Math.max(player.lives, 1);
+  updatePlayerDisplay();
+
+  gameoverMessage.innerHTML = 'Alhamdulillah! Nyawamu kembali. Klik Lanjutkan untuk melanjutkan giliran berikutnya.';
   istighfarSection.style.display = 'none';
   gameoverIstighfar.disabled = true;
   gameoverIstighfar.classList.add('disabled');
-  const card = gameoverOverlay.querySelector('.popup-card');
-  card.classList.add('bonus-active');
-  setTimeout(() => closeOverlay(gameoverOverlay), 800);
+  gameoverRestart.textContent = 'Lanjutkan';
+  gameoverOverlay.querySelector('.popup-card').classList.add('bonus-active');
 }
 
 function checkWin() {
@@ -506,5 +695,12 @@ function checkWin() {
   gameActive = false;
   clearTimer();
   closeOverlay(popupOverlay);
-  setTimeout(() => showOverlay(winOverlay), 300);
+  setTimeout(() => {
+    const best = [...players].sort((a, b) => b.score - a.score)[0];
+    const titleEl = document.querySelector('#win-overlay .popup-title');
+    const messageEl = document.querySelector('#win-overlay .popup-message');
+    titleEl.textContent = 'Selamat! Permainan selesai.';
+    messageEl.innerHTML = `Pemenang: <strong>${best.name}</strong><br>Skor: ${best.score}`;
+    showOverlay(winOverlay);
+  }, 300);
 }
