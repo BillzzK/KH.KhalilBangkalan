@@ -50,6 +50,32 @@ html, body {
 /* ===================== SCREENS ===================== */
 .screen { display: none; position: relative; z-index: 1; min-height: 100vh; }
 .screen.active { display: flex; }
+.game-layout {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 24px;
+  padding: 20px;
+}
+.panel-left,
+.panel-right {
+  flex: 0 0 220px;
+  min-width: 220px;
+}
+.panel-center {
+  flex: 1 1 min(520px, calc(100% - 460px));
+  min-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.board-frame {
+  width: 100%;
+  max-width: 520px;
+}
 
 /* ===================== ANIMATIONS ===================== */
 @keyframes fadeDown {
@@ -242,9 +268,9 @@ html, body {
 #screen-game { display: none; flex-direction: row; align-items: flex-start; gap: 20px; padding: 20px; min-height: 100vh; }
 #screen-game.active { display: flex; }
 
-.panel-left  { width: 200px; min-width: 180px; display: flex; flex-direction: column; gap: 12px; }
-.panel-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0; }
-.panel-right  { width: 220px; min-width: 200px; display: flex; flex-direction: column; gap: 12px; }
+.panel-left  { flex: 0 0 220px; min-width: 220px; display: flex; flex-direction: column; gap: 12px; }
+.panel-center { flex: 1 1 min(520px, calc(100% - 460px)); min-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0; }
+.panel-right  { flex: 0 0 220px; min-width: 220px; display: flex; flex-direction: column; gap: 12px; }
 
 /* Cards */
 .card,
@@ -580,14 +606,40 @@ html, body {
 /* ===================== RESPONSIVE ===================== */
 @media (max-width: 900px) {
   #screen-game.active {
-    flex-direction: column; padding: 12px;
-    align-items: stretch; gap: 12px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 20px;
+    gap: 24px;
   }
-  .panel-left  { width: 100%; flex-direction: row; flex-wrap: wrap; gap: 8px; min-width: auto; }
-  .panel-left .card, .panel-left .btn-new-game { flex: 1; min-width: 140px; }
-  .panel-left .card-quote { width: 100%; flex: unset; }
-  .panel-right { width: 100%; min-width: auto; flex-direction: row; flex-wrap: wrap; gap: 8px; }
-  .panel-right .card { flex: 1; min-width: 140px; }
+  .panel-left, .panel-right {
+    flex: 0 0 220px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .panel-center {
+    flex: 1 1 min(520px, calc(100% - 460px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    min-width: 420px;
+  }
+  .board-frame {
+    width: 100%;
+    max-width: 520px;
+  }
+  .panel-left  { width: auto; }
+  .panel-right { width: auto; }
+  .panel-left .card, .panel-left .btn-new-game,
+  .panel-right .card {
+    flex: unset;
+    min-width: auto;
+  }
+  .panel-left .card-quote { width: 100%; }
   .panel-center { order: -1; }
   .board-wrapper { width: min(360px, 100vw - 24px); }
   .game-header { padding: 0; }
