@@ -55,7 +55,7 @@ html, body {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 24px;
   padding: 20px 28px;
@@ -76,8 +76,8 @@ html, body {
   min-width: 420px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-start;
   gap: 18px;
   height: 100%;
 }
@@ -395,7 +395,7 @@ html, body {
   padding: 16px;
   border-radius: 30px;
   background: rgba(255,255,255,0.95);
-  border: 3px solid rgba(37,122,181,0.22);
+  border: 1.5px solid rgba(37,122,181,0.22);
   box-shadow: 0 22px 60px rgba(20,60,100,0.08);
 }
 .board-wrapper {
@@ -405,7 +405,7 @@ html, body {
   padding: 16px;
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.9);
-  border: 2px solid rgba(37, 122, 181, 0.18);
+  border: 1.5px solid rgba(37, 122, 181, 0.18);
   box-shadow: var(--shadow-soft);
   margin: 0 auto;
 }
