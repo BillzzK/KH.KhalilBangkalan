@@ -94,6 +94,14 @@
 
   <!-- ======================== SCREEN 3: GAME ======================== -->
   <div id="screen-game" class="screen">
+    <div class="game-header game-screen-header">
+      <div>
+        <span class="game-title-small">PseudoKiai</span>
+        <div class="game-subtitle">Perjalanan logika dan kesabaran dalam satu papan</div>
+      </div>
+      <div class="turn-badge" id="turn-badge">Giliran: <span id="turn-name">-</span></div>
+    </div>
+
     <div class="game-layout">
 
       <!-- KIRI -->
@@ -129,13 +137,6 @@
 
       <!-- TENGAH -->
       <main class="panel-center">
-        <div class="game-header">
-          <div>
-            <span class="game-title-small">PseudoKiai</span>
-            <div class="game-subtitle">Perjalanan logika dan kesabaran dalam satu papan</div>
-          </div>
-          <div class="turn-badge" id="turn-badge">Giliran: <span id="turn-name">-</span></div>
-        </div>
         <div class="board-frame">
           <div class="board-wrapper">
             <div class="sudoku-board" id="sudoku-board"></div>

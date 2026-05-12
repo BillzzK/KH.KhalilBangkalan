@@ -274,11 +274,11 @@ html, body {
 .dice-order li { font-size: 14px; color: var(--gray-dark); font-weight: 500; }
 
 /* ===================== GAME LAYOUT ===================== */
-#screen-game { display: none; flex-direction: row; align-items: flex-start; gap: 20px; padding: 20px; min-height: 100vh; }
+#screen-game { display: none; flex-direction: column; align-items: stretch; gap: 20px; padding: 20px; min-height: 100vh; }
 #screen-game.active { display: flex; }
 
 .panel-left  { flex: 0 0 220px; min-width: 220px; display: flex; flex-direction: column; gap: 12px; }
-.panel-center { flex: 1 1 min(520px, calc(100% - 460px)); min-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0; }
+.panel-center { flex: 1 1 min(520px, calc(100% - 460px)); min-width: 420px; display: flex; flex-direction: column; align-items: stretch; gap: 18px; padding: 0; }
 .panel-right  { flex: 0 0 220px; min-width: 220px; display: flex; flex-direction: column; gap: 12px; }
 
 /* Cards */
@@ -355,6 +355,15 @@ html, body {
   flex-direction: column;
   width: 100%; padding: 0;
   gap: 8px;
+  text-align: center;
+}
+.game-screen-header {
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  padding: 0 0 18px;
+  margin-bottom: 10px;
+  gap: 8px;
+  width: 100%;
   text-align: center;
 }
 .game-title-small {
