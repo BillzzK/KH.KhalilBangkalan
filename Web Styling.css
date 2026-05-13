@@ -50,18 +50,21 @@ html, body {
 /* ===================== SCREENS ===================== */
 .screen { display: none; position: relative; z-index: 1; min-height: 100vh; width: 100vw; }
 .screen.active { display: flex; }
-#screen-game.active { width: 100vw; height: 100vh; overflow: hidden; }
+#screen-game { display: none; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 16px; padding: 16px 0; min-height: 100vh; height: 100vh; }
+#screen-game.active { width: 100vw; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 .game-layout {
   display: flex;
   flex-direction: row;
   flex-wrap: nowrap;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: center;
   gap: 24px;
   width: 100%;
-  max-width: 1280px;
+  max-width: 1400px;
   margin: 0 auto;
+  flex: 1;
   min-height: 0;
+  padding: 0 20px;
   box-sizing: border-box;
 }
 .panel-left,
@@ -72,11 +75,12 @@ html, body {
   flex-direction: column;
   gap: 12px;
   min-height: 0;
-  margin-top: -12px;
+  margin-top: 0;
 }
 .panel-center {
-  flex: 1 1 auto;
-  min-width: 420px;
+  flex: 0 0 auto;
+  min-width: 560px;
+  width: 560px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -398,9 +402,6 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  flex: 1;
-  min-height: 0;
-  height: 100%;
   padding: 16px;
   border-radius: 30px;
   background: rgba(255,255,255,0.95);
