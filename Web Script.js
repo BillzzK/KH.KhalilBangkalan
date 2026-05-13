@@ -229,16 +229,15 @@ async function rollDice() {
   const btn = document.getElementById('btn-roll');
   btn.disabled = true;
 
-  // Animate
+  // Faster dice animation
   const svg = document.getElementById('dice-svg');
   svg.classList.add('rolling');
-  await sleep(800);
+  await sleep(260);
   svg.classList.remove('rolling');
 
   const roll = Math.ceil(Math.random()*6);
   renderDiceFace(roll);
 
-  // Check for ties before pushing
   diceRolls.push({ idx: diceCurrentIdx, name: players[diceCurrentIdx].name, roll });
   renderDiceResults(diceRolls);
 
@@ -247,7 +246,6 @@ async function rollDice() {
     updateDiceTurnInfo();
     btn.disabled = false;
   } else {
-    // All rolled — handle ties
     await resolveTies();
   }
 }
@@ -278,24 +276,24 @@ async function resolveTies() {
     }
     if (!tieGroup) break;
 
-    showToast(`${tieGroup.map(t=>t.name).join(', ')} seri! Lempar ulang...`, 2500);
-    await sleep(2600);
+    showToast(`${tieGroup.map(t=>t.name).join(', ')} seri! Lempar ulang...`, 1200);
+    await sleep(1300);
 
     for (const tied of tieGroup) {
       document.getElementById('dice-turn-info').style.display = '';
       document.getElementById('dice-current-name').textContent = tied.name;
-      await sleep(800);
+      await sleep(260);
 
       const svg = document.getElementById('dice-svg');
       svg.classList.add('rolling');
-      await sleep(800);
+      await sleep(260);
       svg.classList.remove('rolling');
 
       const newRoll = Math.ceil(Math.random()*6);
       tied.roll = newRoll;
       renderDiceFace(newRoll);
       renderDiceResults(diceRolls);
-      await sleep(400);
+      await sleep(260);
     }
 
     sorted = [...diceRolls].sort((a,b) => b.roll - a.roll);
@@ -359,7 +357,6 @@ function startGame() {
   document.getElementById('btn-new-game').addEventListener('click', goToLobby);
   document.getElementById('btn-correct-continue').addEventListener('click', () => {
     hideOverlay('overlay-correct');
-    nextTurn();
   });
   document.getElementById('btn-gameover-retry').addEventListener('click', goToLobby);
   document.getElementById('btn-win-again').addEventListener('click', goToLobby);
@@ -510,30 +507,39 @@ function attemptInput(num) {
     }
 
     showOverlay('overlay-correct');
+    setTimeout(() => {
+      hideOverlay('overlay-correct');
+      nextTurn();
+    }, 500);
 
   } else {
     // Wrong
     player.score = Math.max(0, player.score - 5);
-    player.lives--;
+    player.lives = Math.max(0, player.lives - 1);
     player.mistakes++;
     cell.classList.add('wrong');
-    setTimeout(() => cell.classList.remove('wrong'), 500);
+    setTimeout(() => cell.classList.remove('wrong'), 400);
     renderPlayersPanel();
     updateActivePlayerPanel();
-    showToast(`-5 poin · Nyawa berkurang`, 2000);
+
+    document.getElementById('wrong-popup-text').textContent = `-5 poin · ${player.name} kehilangan 1 nyawa`;
+    showOverlay('overlay-wrong');
 
     if (player.lives <= 0) {
       player.lives = 0;
       pendingLivesPlayerIdx = currentPlayerIndex;
       setTimeout(() => {
+        hideOverlay('overlay-wrong');
         document.getElementById('popup-lives-name').textContent = player.name;
         const hasRefill = player.refillUsed < 3;
         document.getElementById('btn-do-istighfar').style.display = hasRefill ? '' : 'none';
         showOverlay('overlay-lives');
-      }, 600);
+      }, 700);
     } else {
-      // Shift turn after wrong
-      setTimeout(() => nextTurn(), 700);
+      setTimeout(() => {
+        hideOverlay('overlay-wrong');
+        nextTurn();
+      }, 700);
     }
   }
 }
